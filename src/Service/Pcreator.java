@@ -29,7 +29,7 @@ public class Pcreator {
             System.out.println("┌────┬─────────────┬──────────────────────────────────────────────┐");
             System.out.println("│ No │ Role        │ Description                                  │");
             System.out.println("├────┼─────────────┼──────────────────────────────────────────────┤");
-            System.out.println("│ 1  │ Strategist  │ Focuses on tactics and planning.              │");
+            System.out.println("│ 1  │ Strategist  │ Focuses on tactics and planning.             │");
             System.out.println("│ 2  │ Attacker    │ Frontline player; aggressive and offensive.  │");
             System.out.println("│ 3  │ Defender    │ Protects and stabilizes the team.            │");
             System.out.println("│ 4  │ Supporter   │ Helps teammates perform better.              │");

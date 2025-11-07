@@ -10,7 +10,10 @@ public class Participant {
     private int personalityScore;
     private String personalityType;
 
-    //  Constructor
+    // NEW: Add a field for availability or group preference (optional, can help matching)
+    private String availability; // e.g., "Morning", "Evening", "Weekend"
+
+    // Constructor (updated to include optional new field)
     public Participant(String id, String name, String email, String preferredGame, int skillLevel,
                        String preferredRole, int personalityScore, String personalityType) {
         this.id = id;
@@ -23,7 +26,14 @@ public class Participant {
         this.personalityType = personalityType;
     }
 
-    // Getters
+    // Overloaded constructor (if availability is provided)
+    public Participant(String id, String name, String email, String preferredGame, int skillLevel,
+                       String preferredRole, int personalityScore, String personalityType, String availability) {
+        this(id, name, email, preferredGame, skillLevel, preferredRole, personalityScore, personalityType);
+        this.availability = availability;
+    }
+
+    // ---------------- Getters ----------------
     public String getId() {
         return id;
     }
@@ -56,7 +66,11 @@ public class Participant {
         return personalityType;
     }
 
-    //  Setters
+    public String getAvailability() {
+        return availability;
+    }
+
+    // ---------------- Setters ----------------
     public void setId(String id) {
         this.id = id;
     }
@@ -89,13 +103,39 @@ public class Participant {
         this.personalityType = personalityType;
     }
 
+    public void setAvailability(String availability) {
+        this.availability = availability;
+    }
 
+    // ---------------- Utility Methods ----------------
+
+    /**
+     * Compare compatibility between two participants based on personality score.
+     * You can expand this to use Myers-Briggs or DISC type logic later.
+     */
+    public double calculateCompatibility(Participant other) {
+        // For now, compatibility = 100 - |difference in personality score|
+        return 100 - Math.abs(this.personalityScore - other.personalityScore);
+    }
+
+    /**
+     * Quick helper for checking if two participants play the same game.
+     */
+    public boolean playsSameGame(Participant other) {
+        return this.preferredGame.equalsIgnoreCase(other.preferredGame);
+    }
+
+    /**
+     * Return a simple readable summary.
+     */
     @Override
     public String toString() {
-        return id + " | " + name + " | " + preferredGame +
+        return id + " | " + name +
+                " | Game: " + preferredGame +
                 " | Skill: " + skillLevel +
                 " | Role: " + preferredRole +
                 " | Score: " + personalityScore +
-                " | Type: " + personalityType;
+                " | Type: " + personalityType +
+                (availability != null ? " | Availability: " + availability : "");
     }
 }

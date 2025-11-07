@@ -11,10 +11,10 @@ public class TeamFileHandler {
         try (FileWriter writer = new FileWriter(outputPath)) {
             StringBuilder sb = new StringBuilder();
 
-            // ✅ Header row
+
             sb.append("Team Number,ID,Name,Email,Preferred Game,Skill Level,Preferred Role,Personality Score,Personality Type\n");
 
-            // ✅ Loop through all teams
+            //  Loop
             for (int i = 0; i < teams.size(); i++) {
                 int teamNumber = i + 1;
                 List<Participant> team = teams.get(i);
@@ -46,7 +46,7 @@ public class TeamFileHandler {
 
                 double avgSkill = (team.isEmpty()) ? 0 : (double) totalSkill / team.size();
 
-                // ✅ Add team summary row
+
                 sb.append("Summary for Team ").append(teamNumber).append(",,")
                         .append("Average Skill: ").append(String.format("%.2f", avgSkill))
                         .append(", Leaders: ").append(leaderCount)
@@ -57,13 +57,12 @@ public class TeamFileHandler {
                 sb.append("------------------------------------------------------------\n");
             }
 
-            // ✅ Write everything once
             writer.write(sb.toString());
 
-            System.out.println("\n✅ Teams successfully saved to: " + outputPath);
+            System.out.println("\n Teams successfully saved to: " + outputPath);
 
         } catch (IOException e) {
-            System.err.println("❌ Error writing to CSV file: " + e.getMessage());
+            System.err.println(" Error writing to CSV file: " + e.getMessage());
         }
     }
 }

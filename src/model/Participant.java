@@ -10,7 +10,7 @@ public class Participant {
     private int personalityScore;
     private String personalityType;
 
-    // ✅ Constructor
+    //  Constructor
     public Participant(String id, String name, String email, String preferredGame, int skillLevel,
                        String preferredRole, int personalityScore, String personalityType) {
         this.id = id;
@@ -23,7 +23,7 @@ public class Participant {
         this.personalityType = personalityType;
     }
 
-    // ✅ Getters
+    // Getters
     public String getId() {
         return id;
     }
@@ -56,7 +56,7 @@ public class Participant {
         return personalityType;
     }
 
-    // ✅ Setters (optional but useful for updates)
+    //  Setters
     public void setId(String id) {
         this.id = id;
     }
@@ -89,7 +89,7 @@ public class Participant {
         this.personalityType = personalityType;
     }
 
-    // ✅ ToString — for easy printing
+
     @Override
     public String toString() {
         return id + " | " + name + " | " + preferredGame +

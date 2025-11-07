@@ -1,65 +1,61 @@
 package Service;
 
-import model.Participant;
 import java.util.Scanner;
 
 public class Survey {
 
-    /**
-     * Conducts a survey to collect participant info and returns a Participant object.
-     */
-    public static Participant conductSurvey() {
+    public static int conductPersonalitySurvey() {
         Scanner sc = new Scanner(System.in);
+        int total = 0;
 
-        System.out.println("\n=== PARTICIPANT SURVEY ===");
+        System.out.println("\n===== Personality Type Survey =====");
+        System.out.println("Please rate each statement from 1 (Strongly Disagree) to 5 (Strongly Agree)\n");
 
-        System.out.print("Enter ID: ");
-        String id = sc.nextLine();
+        String[] questions = {
+                "1. I enjoy taking the lead and guiding others during group activities.",
+                "2. I prefer analyzing situations and coming up with strategic solutions.",
+                "3. I work well with others and enjoy collaborative teamwork.",
+                "4. I am calm under pressure and can help maintain team morale.",
+                "5. I like making quick decisions and adapting in dynamic situations."
+        };
 
-        System.out.print("Enter Name: ");
-        String name = sc.nextLine();
+        for (String q : questions) {
+            int answer;
+            do {
+                System.out.print(q + " → Your answer (1–5): ");
+                while (!sc.hasNextInt()) {
+                    System.out.print("Invalid input. Please enter a number between 1–5: ");
+                    sc.next();
+                }
+                answer = sc.nextInt();
+            } while (answer < 1 || answer > 5);
+            total += answer;
+        }
 
-        System.out.print("Enter Email: ");
-        String email = sc.nextLine();
+        int scaledScore = total * 4;  // Scale total to 100
+        String type = classifyPersonality(scaledScore);
 
-        System.out.print("Enter Preferred Game (e.g., Football, Cricket): ");
-        String preferredGame = sc.nextLine();
+        System.out.println("\n===== Personality Summary =====");
+        System.out.println("Raw Score: " + total + " (out of 25)");
+        System.out.println("Scaled Score: " + scaledScore + " (out of 100)");
+        System.out.println("Personality Type: " + type);
+        System.out.println("Description: " + getTypeDescription(type));
 
-        System.out.print("Enter Skill Level (1–10): ");
-        int skillLevel = sc.nextInt();
-        sc.nextLine(); // consume newline
-
-        System.out.print("Enter Preferred Role (e.g., Attacker, Defender, Support): ");
-        String preferredRole = sc.nextLine();
-
-        System.out.print("Enter Personality Score (1–100): ");
-        int personalityScore = sc.nextInt();
-        sc.nextLine(); // consume newline
-
-        System.out.print("Enter Personality Type (Leader / Thinker / Balanced): ");
-        String personalityType = sc.nextLine();
-
-        Participant participant = new Participant(
-                id,
-                name,
-                email,
-                preferredGame,
-                skillLevel,
-                preferredRole,
-                personalityScore,
-                personalityType
-        );
-
-        System.out.println("\n✅ Survey completed for " + name + "!");
-        return participant;
+        return scaledScore;
     }
 
-    /**
-     * Conducts the survey and immediately saves the participant to CSV.
-     */
-    public static void conductAndSaveSurvey(String filePath) {
-        Participant p = conductSurvey();
-        FileHandler.saveParticipant(filePath, p);
-        System.out.println("✅ Participant saved to CSV: " + filePath);
+    public static String classifyPersonality(int score) {
+        if (score >= 90) return "Leader";
+        else if (score >= 70) return "Balanced";
+        else return "Thinker";
+    }
+
+    public static String getTypeDescription(String type) {
+        return switch (type) {
+            case "Leader" -> "Confident, decision-maker, naturally takes charge.";
+            case "Balanced" -> "Adaptive, communicative, and team-oriented.";
+            case "Thinker" -> "Observant, analytical, and prefers planning before action.";
+            default -> "Unknown type.";
+        };
     }
 }

@@ -7,7 +7,7 @@ import java.util.List;
 
 public class FileHandler {
 
-    // ✅ Load all participants from CSV file
+    // Load  participants from CSV file
     public static List<Participant> loadParticipants(String filePath) {
         List<Participant> participants = new ArrayList<>();
 
@@ -40,13 +40,13 @@ public class FileHandler {
             }
 
         } catch (IOException e) {
-            System.err.println("❌ Error reading file: " + e.getMessage());
+            System.err.println(" Error reading file: " + e.getMessage());
         }
 
         return participants;
     }
 
-    // ✅ Append new participant to CSV file
+    //  Append new participant to CSV file
     public static void saveParticipant(String filePath, Participant participant) {
         try (FileWriter writer = new FileWriter(filePath, true)) {
             writer.write(
@@ -60,7 +60,7 @@ public class FileHandler {
                             participant.getPersonalityType() + "\n"
             );
         } catch (IOException e) {
-            System.err.println("❌ Error writing to file: " + e.getMessage());
+            System.err.println(" Error writing to file: " + e.getMessage());
         }
     }
 }

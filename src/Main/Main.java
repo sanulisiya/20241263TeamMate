@@ -6,6 +6,7 @@ import Service.Pcreator;
 import Service.TeamBuilder;
 import Service.TeamFileHandler;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -16,8 +17,10 @@ public class Main {
         Scanner sc = new Scanner(System.in);
         String path = "C:\\Users\\DELL\\Desktop\\participants_sample.csv";
         String outputPath = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv";
+
         List<Participant> participants = null;
         List<List<Participant>> teams = null;
+        List<Participant> remainingPool = new ArrayList<>();
 
         System.out.println("==== TEAMMATE COMMUNITY SYSTEM ====");
         System.out.println("Login as:");
@@ -38,11 +41,10 @@ public class Main {
             int pChoice = sc.nextInt();
 
             if (pChoice == 1) {
-
                 System.out.println("Teams have not been formed yet by the organizers. Please check later!");
             }
 
-            System.out.println("\n Thank you for registering!");
+            System.out.println("\nThank you for registering!");
 
         } else if (loginChoice == 2) {
 
@@ -64,20 +66,36 @@ public class Main {
                     case 1:
                         participants = FileHandler.loadParticipants(path);
                         if (participants == null || participants.isEmpty()) {
-                            System.out.println(" No participants found. Upload CSV first.");
+                            System.out.println("No participants found. Upload CSV first.");
                         } else {
                             System.out.print("Enter desired team size (e.g. 5): ");
                             int teamSize = sc.nextInt();
                             sc.nextLine();
-
+// Form teams using the improved matching algorithm
                             teams = TeamBuilder.formTeams(participants, teamSize);
-                            System.out.println("\n Teams Formed Successfully!");
 
+// Get the remaining participants (extra leaders or leftover players)
+                            remainingPool = TeamBuilder.getRemainingParticipants();
+
+
+                            System.out.println("\n✅ Teams Formed Successfully!");
+
+                            // Display formed teams
                             for (int i = 0; i < teams.size(); i++) {
                                 System.out.println("\n======= TEAM " + (i + 1) + " =======");
                                 for (Participant p : teams.get(i)) {
                                     System.out.println(p);
                                 }
+                            }
+
+                            // Display unassigned participants (remaining pool)
+                            if (!remainingPool.isEmpty()) {
+                                System.out.println("\n⚠️ Remaining Unassigned Participants (Extra Leaders/Players):");
+                                for (Participant p : remainingPool) {
+                                    System.out.println(p);
+                                }
+                            } else {
+                                System.out.println("\nAll participants successfully assigned to teams!");
                             }
                         }
                         break;
@@ -85,7 +103,7 @@ public class Main {
                     case 2:
                         participants = FileHandler.loadParticipants(path);
                         if (participants == null || participants.isEmpty()) {
-                            System.out.println(" No participants available.");
+                            System.out.println("No participants available.");
                         } else {
                             System.out.println("\n--- PARTICIPANT LIST ---");
                             for (Participant p : participants) {
@@ -96,10 +114,10 @@ public class Main {
 
                     case 3:
                         if (teams == null || teams.isEmpty()) {
-                            System.out.println(" Teams not formed yet. Please form teams first.");
+                            System.out.println("Teams not formed yet. Please form teams first.");
                         } else {
                             TeamFileHandler.saveTeamsToCSV(teams, outputPath);
-                            System.out.println(" Teams saved to: " + outputPath);
+                            System.out.println("Teams saved to: " + outputPath);
                         }
                         break;
 
@@ -109,19 +127,19 @@ public class Main {
                         participants = FileHandler.loadParticipants(path);
 
                         if (participants != null && !participants.isEmpty()) {
-                            System.out.println(" CSV Uploaded Successfully! Total Participants: " + participants.size());
+                            System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
                         } else {
-                            System.out.println(" CSV Upload Failed. Check file path!");
+                            System.out.println("CSV Upload Failed. Check file path!");
                         }
                         break;
 
                     case 5:
-                        System.out.println(" Organizer Logged Out Successfully!");
+                        System.out.println("Organizer Logged Out Successfully!");
                         running = false;
                         break;
 
                     default:
-                        System.out.println(" Invalid Option. Try again!");
+                        System.out.println("Invalid Option. Try again!");
                         break;
                 }
             }

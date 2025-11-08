@@ -17,6 +17,7 @@ public class MainCLI {
         Scanner sc = new Scanner(System.in);
         List<Participant> participants = FileHandler.loadParticipants(FILE_PATH);
         List<List<Participant>> teams = null;
+        List<Participant> remainingPool = new ArrayList<>();
 
         System.out.println("======================================");
         System.out.println("🎮 TEAM MATE COMMUNITY SYSTEM");
@@ -50,7 +51,7 @@ public class MainCLI {
             sc.nextLine();
 
             if (pChoice == 1) {
-                System.out.println("\n️ Teams have not been formed yet. Please check later!");
+                System.out.println("\n⚠️ Teams have not been formed yet. Please check later!");
             }
 
             System.out.println("\n Thank you for joining!");
@@ -74,7 +75,7 @@ public class MainCLI {
                 try {
                     choice = Integer.parseInt(sc.nextLine());
                 } catch (NumberFormatException e) {
-                    System.out.println("️ Please enter a number (1–5).");
+                    System.out.println("⚠️ Please enter a number (1–5).");
                     continue;
                 }
 
@@ -95,8 +96,11 @@ public class MainCLI {
                             break;
                         }
 
+                        // ✅ Form teams using the improved matching algorithm
                         teams = TeamBuilder.formTeams(participants, teamSize);
-                        System.out.println("\n Teams Formed Successfully!");
+                        remainingPool = TeamBuilder.getRemainingParticipants();
+
+                        System.out.println("\n✅ Teams Formed Successfully!");
 
                         int tNum = 1;
                         for (List<Participant> team : teams) {
@@ -104,6 +108,16 @@ public class MainCLI {
                             for (Participant p : team) {
                                 System.out.println(p);
                             }
+                        }
+
+                        // ✅ Show leftover participants (if any)
+                        if (!remainingPool.isEmpty()) {
+                            System.out.println("\n⚠️ Remaining Unassigned Participants (Extra Leaders/Overflow):");
+                            for (Participant p : remainingPool) {
+                                System.out.println(p);
+                            }
+                        } else {
+                            System.out.println("\nAll participants successfully assigned to teams!");
                         }
                         break;
 
@@ -120,11 +134,11 @@ public class MainCLI {
                         break;
 
                     case 3:
-                        if (teams == null) {
-                            System.out.println("⚠ Please form teams first!");
+                        if (teams == null || teams.isEmpty()) {
+                            System.out.println("⚠️ Please form teams first!");
                         } else {
                             TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
-                            System.out.println(" Teams saved to: " + OUTPUT_PATH);
+                            System.out.println("💾 Teams saved to: " + OUTPUT_PATH);
                         }
                         break;
 
@@ -134,14 +148,14 @@ public class MainCLI {
                         participants = FileHandler.loadParticipants(FILE_PATH);
 
                         if (participants != null && !participants.isEmpty()) {
-                            System.out.println(" CSV Loaded! Total Participants: " + participants.size());
+                            System.out.println("📂 CSV Loaded! Total Participants: " + participants.size());
                         } else {
-                            System.out.println(" Failed to load CSV. Check file path!");
+                            System.out.println("❌ Failed to load CSV. Check file path!");
                         }
                         break;
 
                     case 5:
-                        System.out.println("\n Organizer Logged Out!");
+                        System.out.println("\n👋 Organizer Logged Out!");
                         running = false;
                         break;
 

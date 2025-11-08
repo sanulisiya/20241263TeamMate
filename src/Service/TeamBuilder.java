@@ -5,99 +5,106 @@ import java.util.*;
 
 public class TeamBuilder {
 
-    public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
-        // Shuffle to add randomness and fairness
-        Collections.shuffle(participants, new Random());
+    private static final List<Participant> remainingParticipants = new ArrayList<>();
 
-        int numTeams = (int) Math.ceil((double) participants.size() / teamSize);
+    public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
+        Collections.shuffle(participants, new Random());
+        remainingParticipants.clear();
+
+        if (participants.isEmpty() || teamSize <= 0) {
+            return Collections.emptyList();
+        }
+
+        // Separate leaders and others
+        List<Participant> leaders = new ArrayList<>();
+        List<Participant> others = new ArrayList<>();
+
+        for (Participant p : participants) {
+            if (p.getPersonalityType().equalsIgnoreCase("Leader")) {
+                leaders.add(p);
+            } else {
+                others.add(p);
+            }
+        }
+
+        // Decide maximum possible teams based on number of leaders and total participants
+        int possibleTeams = Math.min(leaders.size(), participants.size() / teamSize);
+        if (possibleTeams == 0) {
+            remainingParticipants.addAll(participants);
+            return Collections.emptyList();
+        }
+
         List<List<Participant>> teams = new ArrayList<>();
-        for (int i = 0; i < numTeams; i++) {
+        for (int i = 0; i < possibleTeams; i++) {
             teams.add(new ArrayList<>());
         }
 
-        int[] skillTotals = new int[numTeams];
-        double overallAvgSkill = participants.stream().mapToInt(Participant::getSkillLevel).average().orElse(0);
+        // Assign one leader per team
+        for (int i = 0; i < possibleTeams; i++) {
+            teams.get(i).add(leaders.get(i));
+        }
 
-        for (Participant p : participants) {
+        // Compute global average skill
+        double overallAvg = participants.stream()
+                .mapToInt(Participant::getSkillLevel)
+                .average()
+                .orElse(0);
+
+        int[] skillTotals = new int[possibleTeams];
+        for (int i = 0; i < possibleTeams; i++) {
+            skillTotals[i] = teams.get(i).get(0).getSkillLevel();
+        }
+
+        // Fill teams intelligently with others
+        for (Participant p : others) {
             int bestTeam = -1;
-            double bestScore = Double.MIN_VALUE; // Higher = better match
+            double minDiff = Double.MAX_VALUE;
 
-            for (int t = 0; t < numTeams; t++) {
+            for (int t = 0; t < possibleTeams; t++) {
                 List<Participant> team = teams.get(t);
+                if (team.size() >= teamSize) continue; // skip full team
+                if (countGame(team, p.getPreferredGame()) >= 2) continue; // limit duplicate game
 
-                if (team.size() >= teamSize) continue; // team full
-                if (countGame(team, p.getPreferredGame()) >= 2) continue; // limit duplicate games
-                if (countRole(team, p.getPreferredRole()) >= 2) continue; // limit duplicate roles
+                double newAvg = (double) (skillTotals[t] + p.getSkillLevel()) / (team.size() + 1);
+                double diff = Math.abs(newAvg - overallAvg);
 
-                // Compute factors
-                double newAvgSkill = (skillTotals[t] + p.getSkillLevel()) / (double) (team.size() + 1);
-                double skillBalanceScore = 100 - Math.abs(newAvgSkill - overallAvgSkill); // closer to avg = better
-                double personalityCompatibility = calcTeamCompatibility(team, p); // avg personality match
-                double diversityBonus = calcDiversityBonus(team, p); // + if new game/role/personality type
-
-                // Weighted score (you can tune weights)
-                double totalScore = (0.5 * skillBalanceScore) + (0.3 * personalityCompatibility) + (0.2 * diversityBonus);
-
-                if (totalScore > bestScore) {
-                    bestScore = totalScore;
+                if (diff < minDiff) {
+                    minDiff = diff;
                     bestTeam = t;
                 }
             }
 
-            // Fallback: if no team fits all criteria
-            if (bestTeam == -1) {
-                for (int t = 0; t < numTeams; t++) {
-                    if (teams.get(t).size() < teamSize) {
-                        bestTeam = t;
-                        break;
-                    }
-                }
+            if (bestTeam != -1) {
+                teams.get(bestTeam).add(p);
+                skillTotals[bestTeam] += p.getSkillLevel();
+            } else {
+                remainingParticipants.add(p);
             }
-
-            // Assign participant
-            teams.get(bestTeam).add(p);
-            skillTotals[bestTeam] += p.getSkillLevel();
         }
 
+        // Any partially filled teams that couldn’t reach teamSize → move to leftover pool
+        Iterator<List<Participant>> it = teams.iterator();
+        while (it.hasNext()) {
+            List<Participant> team = it.next();
+            if (team.size() < teamSize) {
+                remainingParticipants.addAll(team);
+                it.remove();
+            }
+        }
+
+        // Return only complete teams
         return teams;
     }
 
-    // ---------------- Helper Methods ----------------
-
+    // Helper to count members with same preferred game
     private static int countGame(List<Participant> team, String game) {
         return (int) team.stream()
                 .filter(p -> p.getPreferredGame().equalsIgnoreCase(game))
                 .count();
     }
 
-    private static int countRole(List<Participant> team, String role) {
-        return (int) team.stream()
-                .filter(p -> p.getPreferredRole().equalsIgnoreCase(role))
-                .count();
-    }
-
-    // Calculate how compatible this participant is with current team (based on personality score)
-    private static double calcTeamCompatibility(List<Participant> team, Participant newMember) {
-        if (team.isEmpty()) return 100.0; // Perfect compatibility with empty team
-
-        double totalCompatibility = 0;
-        for (Participant p : team) {
-            totalCompatibility += p.calculateCompatibility(newMember);
-        }
-        return totalCompatibility / team.size(); // average
-    }
-
-    // Reward if participant adds diversity in game, role, or personality type
-    private static double calcDiversityBonus(List<Participant> team, Participant newMember) {
-        boolean hasSameGame = team.stream().anyMatch(p -> p.getPreferredGame().equalsIgnoreCase(newMember.getPreferredGame()));
-        boolean hasSameRole = team.stream().anyMatch(p -> p.getPreferredRole().equalsIgnoreCase(newMember.getPreferredRole()));
-        boolean hasSamePersonality = team.stream().anyMatch(p -> p.getPersonalityType().equalsIgnoreCase(newMember.getPersonalityType()));
-
-        double bonus = 0;
-        if (!hasSameGame) bonus += 30;
-        if (!hasSameRole) bonus += 30;
-        if (!hasSamePersonality) bonus += 40;
-
-        return bonus; // max 100
+    // Getter for leftover participants
+    public static List<Participant> getRemainingParticipants() {
+        return new ArrayList<>(remainingParticipants);
     }
 }

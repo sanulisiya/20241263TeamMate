@@ -20,15 +20,27 @@ public class Survey {
         };
 
         for (String q : questions) {
-            int answer;
-            do {
+            int answer = -1;
+            boolean valid = false;
+
+            while (!valid) {
                 System.out.print(q + " → Your answer (1–5): ");
-                while (!sc.hasNextInt()) {
-                    System.out.print("Invalid input. Please enter a number between 1–5: ");
-                    sc.next();
+                String input = sc.nextLine().trim();
+
+                try {
+                    answer = Integer.parseInt(input);
+
+                    if (answer >= 1 && answer <= 5) {
+                        valid = true;
+                    } else {
+                        System.out.println(" Please enter a number between 1 and 5 only.");
+                    }
+
+                } catch (NumberFormatException e) {
+                    System.out.println(" Invalid input. Please enter a numeric value between 1 and 5.");
                 }
-                answer = sc.nextInt();
-            } while (answer < 1 || answer > 5);
+            }
+
             total += answer;
         }
 
@@ -47,7 +59,8 @@ public class Survey {
     public static String classifyPersonality(int score) {
         if (score >= 90) return "Leader";
         else if (score >= 70) return "Balanced";
-        else return "Thinker";
+        else if (score>=50) return "Thinker";
+        else return "Motivator";
     }
 
     public static String getTypeDescription(String type) {
@@ -55,6 +68,7 @@ public class Survey {
             case "Leader" -> "Confident, decision-maker, naturally takes charge.";
             case "Balanced" -> "Adaptive, communicative, and team-oriented.";
             case "Thinker" -> "Observant, analytical, and prefers planning before action.";
+            case "Motivator" -> "boosting morale and encouraging collaboration to achieve goals.";
             default -> "Unknown type.";
         };
     }

@@ -38,7 +38,7 @@ public class FileHandler {
             }
 
         } catch (IOException e) {
-            System.err.println("❌ Error reading file: " + e.getMessage());
+            System.err.println(" Error reading file: " + e.getMessage());
         }
 
         return participants;
@@ -58,7 +58,7 @@ public class FileHandler {
                             participant.getPersonalityType() + "\n"
             );
         } catch (IOException e) {
-            System.err.println("❌ Error writing to file: " + e.getMessage());
+            System.err.println(" Error writing to file: " + e.getMessage());
         }
     }
 

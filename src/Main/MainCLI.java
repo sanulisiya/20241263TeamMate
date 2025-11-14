@@ -22,199 +22,223 @@ public class MainCLI {
         List<List<Participant>> teams = null;
         List<Participant> remainingPool = new ArrayList<>();
 
-        System.out.println("==== TEAMMATE COMMUNITY SYSTEM ====");
-        System.out.println("Login as:");
-        System.out.println("1. Participant");
-        System.out.println("2. Organizer");
-        System.out.print("Select option: ");
+        while (true) {
 
-        int loginChoice = sc.nextInt();
-        sc.nextLine();
-
-        // ---------------- PARTICIPANT FLOW ----------------
-        if (loginChoice == 1) {
-            System.out.println("\n--- PARTICIPANT MENU ---");
-            System.out.println("1. Add New Participant");
-            System.out.println("2. Login as Existing Participant");
+            System.out.println("\n==== TEAMMATE COMMUNITY SYSTEM ====");
+            System.out.println("Login as:");
+            System.out.println("1. Participant");
+            System.out.println("2. Organizer");
+            System.out.println("3. Exit");
             System.out.print("Select option: ");
 
-            int participantChoice = sc.nextInt();
+            int loginChoice = sc.nextInt();
             sc.nextLine();
 
-            if (participantChoice == 1) {
-                // Add new participant
-                Pcreator.createNewParticipant(FILE_PATH);
+            // ============================= PARTICIPANT FLOW =============================
+            if (loginChoice == 1) {
 
-            } else if (participantChoice == 2) {
-                // Existing participant login
-                System.out.print("Enter Participant ID: ");
-                String participantId = sc.nextLine().trim();
-
-                participants = FileHandler.loadParticipants(FILE_PATH);
-                Participant found = null;
-                for (Participant p : participants) {
-                    if (p.getId().equalsIgnoreCase(participantId)) {
-                        found = p;
-                        break;
-                    }
-                }
-
-                if (found != null) {
-                    System.out.println("\n Participant Found!");
-                    System.out.println(found);
-
-                    boolean loginMenu = true;
-                    while (loginMenu) {
-                        System.out.println("\nDo you want to:");
-                        System.out.println("1. View Assigned Team");
-                        System.out.println("2. Exit");
-                        System.out.print("Enter choice: ");
-                        int choice = sc.nextInt();
-                        sc.nextLine();
-
-                        switch (choice) {
-                            case 1:
-                                List<List<Participant>> formattedTeams = FileHandler.loadFormattedTeams(OUTPUT_PATH);
-                                if (formattedTeams == null || formattedTeams.isEmpty()) {
-                                    System.out.println("\n Teams have not been formed yet. Please check later!");
-                                } else {
-                                    boolean foundTeam = false;
-                                    for (int i = 0; i < formattedTeams.size(); i++) {
-                                        List<Participant> team = formattedTeams.get(i);
-                                        for (Participant member : team) {
-                                            if (member.getId().equalsIgnoreCase(found.getId())) {
-                                                System.out.println("\n You are in TEAM " + (i + 1));
-                                                System.out.println("---- Team Members ----");
-                                                for (Participant teammate : team) {
-                                                    System.out.println(teammate);
-                                                }
-                                                foundTeam = true;
-                                                break;
-                                            }
-                                        }
-                                        if (foundTeam) break;
-                                    }
-                                    if (!foundTeam) {
-                                        System.out.println("\n️ You are not assigned to any team yet. Please check later.");
-                                    }
-                                }
-                                break;
-
-
-                            case 2:
-                                System.out.println("Logging out...");
-                                loginMenu = false;
-                                break;
-
-                            default:
-                                System.out.println("Invalid choice. Please enter 1 or 2.");
-                        }
-                    }
-
-                } else {
-                    System.out.println(" Participant not found. Please check your ID.");
-                }
-            } else {
-                System.out.println(" Invalid option. Please enter 1 or 2.");
-            }
-        }
-
-        // ---------------- ORGANIZER FLOW ----------------
-        else if (loginChoice == 2) {
-            boolean running = true;
-            while (running) {
-                System.out.println("\n--- ORGANIZER PANEL ---");
-                System.out.println("1. Upload CSV");
-                System.out.println("2. View All Participants");
-                System.out.println("3. Formation of Teams");
-                System.out.println("4. Save Formed Teams");
-                System.out.println("5. Exit");
+                System.out.println("\n--- PARTICIPANT MENU ---");
+                System.out.println("1. Add New Participant");
+                System.out.println("2. Login as Existing Participant");
                 System.out.print("Select option: ");
 
-                int choice = sc.nextInt();
+                int participantChoice = sc.nextInt();
                 sc.nextLine();
 
-                switch (choice) {
-                    case 1:
-                        // Upload CSV
-                        System.out.print("\nEnter CSV File Path: ");
-                        String path = sc.nextLine();
-                        participants = FileHandler.loadParticipants(path);
-                        if (participants != null && !participants.isEmpty()) {
-                            System.out.println(" CSV Uploaded Successfully! Total Participants: " + participants.size());
-                        } else {
-                            System.out.println(" CSV Upload Failed. Check file path!");
+                // ---- ADD NEW PARTICIPANT ----
+                if (participantChoice == 1) {
+
+                    Pcreator.createNewParticipant(FILE_PATH);
+
+                    System.out.println("\nParticipant added successfully!");
+                    System.out.println("Returning to main menu...\n");
+                    continue; // back to main menu
+
+                }
+
+                // ---- EXISTING PARTICIPANT LOGIN ----
+                else if (participantChoice == 2) {
+
+                    System.out.print("Enter Participant ID: ");
+                    String participantId = sc.nextLine().trim();
+
+                    participants = FileHandler.loadParticipants(FILE_PATH);
+                    Participant found = null;
+
+                    for (Participant p : participants) {
+                        if (p.getId().equalsIgnoreCase(participantId)) {
+                            found = p;
+                            break;
                         }
-                        break;
+                    }
 
-                    case 2:
-                        // View All Participants
-                        participants = FileHandler.loadParticipants(FILE_PATH);
-                        if (participants == null || participants.isEmpty()) {
-                            System.out.println("️ No participants available.");
-                        } else {
-                            System.out.println("\n--- PARTICIPANT LIST ---");
-                            for (Participant p : participants) {
-                                System.out.println(p);
-                            }
-                        }
-                        break;
+                    if (found != null) {
 
-                    case 3:
-                        // Formation of Teams
-                        participants = FileHandler.loadParticipants(FILE_PATH);
-                        if (participants == null || participants.isEmpty()) {
-                            System.out.println("️ No participants found. Upload CSV first.");
-                        } else {
-                            System.out.print("Enter desired team size: ");
-                            int teamSize = sc.nextInt();
-                            sc.nextLine();
+                        System.out.println("\nParticipant Found!");
+                        System.out.println(found);
 
-                            teams = TeamBuilder.formTeams(participants, teamSize);
-                            remainingPool = TeamBuilder.getRemainingParticipants();
+                        System.out.print("\nDo you want to view your assigned team? (yes/no): ");
+                        String yn = sc.nextLine().trim().toLowerCase();
 
-                            System.out.println("\n Teams Formed Successfully!");
-                            for (int i = 0; i < teams.size(); i++) {
-                                System.out.println("\n======= TEAM " + (i + 1) + " =======");
-                                for (Participant p : teams.get(i)) {
-                                    System.out.println(p);
-                                }
-                            }
+                        if (yn.equals("yes")) {
 
-                            if (!remainingPool.isEmpty()) {
-                                System.out.println("\nRemaining Unassigned Participants:");
-                                for (Participant p : remainingPool) {
-                                    System.out.println(p);
-                                }
+                            List<List<Participant>> formattedTeams = FileHandler.loadFormattedTeams(OUTPUT_PATH);
+
+                            if (formattedTeams == null || formattedTeams.isEmpty()) {
+                                System.out.println("\nTeams have not been formed yet. Please check later!");
+
                             } else {
-                                System.out.println("\nAll participants successfully assigned to teams!");
+                                boolean foundTeam = false;
+
+                                for (int i = 0; i < formattedTeams.size(); i++) {
+                                    List<Participant> team = formattedTeams.get(i);
+
+                                    for (Participant teammate : team) {
+                                        if (teammate.getId().equalsIgnoreCase(found.getId())) {
+                                            System.out.println("\nYou are in TEAM " + (i + 1));
+                                            System.out.println("---- Team Members ----");
+
+                                            for (Participant t : team) {
+                                                System.out.println(t);
+                                            }
+                                            foundTeam = true;
+                                            break;
+                                        }
+                                    }
+                                    if (foundTeam) break;
+                                }
+
+                                if (!foundTeam) {
+                                    System.out.println("\nYou are not assigned to any team yet.");
+                                }
                             }
                         }
-                        break;
 
-                    case 4:
-                        // Save Formed Teams
-                        if (teams == null || teams.isEmpty()) {
-                            System.out.println("️ Teams not formed yet. Please form teams first.");
-                        } else {
-                            TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
-                            System.out.println(" Teams saved to: " + OUTPUT_PATH);
-                        }
-                        break;
+                        System.out.println("\nReturning to main menu...\n");
+                        continue; // back to main menu
 
-                    case 5:
-                        // Exit
-                        System.out.println("Organizer Logged Out Successfully!");
-                        running = false;
-                        break;
+                    } else {
+                        System.out.println("\nParticipant not found. Returning to main menu...");
+                        continue;
+                    }
+                }
 
-                    default:
-                        System.out.println(" Invalid Option. Try again!");
-                        break;
+                else {
+                    System.out.println("Invalid participant option.");
+                    continue;
                 }
             }
-        } else {
-            System.out.println(" Invalid Login Option!");
+
+            // ============================= ORGANIZER FLOW =============================
+            else if (loginChoice == 2) {
+
+                boolean organizerRunning = true;
+
+                while (organizerRunning) {
+
+                    System.out.println("\n--- ORGANIZER PANEL ---");
+                    System.out.println("1. Upload CSV");
+                    System.out.println("2. View All Participants");
+                    System.out.println("3. Formation of Teams");
+                    System.out.println("4. Save Formed Teams");
+                    System.out.println("5. Back to Main Menu");
+                    System.out.print("Select option: ");
+
+                    int choice = sc.nextInt();
+                    sc.nextLine();
+
+                    switch (choice) {
+
+                        case 1:
+                            System.out.print("\nEnter CSV File Path: ");
+                            String path = sc.nextLine();
+
+                            participants = FileHandler.loadParticipants(path);
+
+                            if (participants != null && !participants.isEmpty()) {
+                                System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
+                            } else {
+                                System.out.println("CSV Upload Failed. Check file path!");
+                            }
+                            break; // stay inside organizer menu
+
+                        case 2:
+                            participants = FileHandler.loadParticipants(FILE_PATH);
+
+                            if (participants == null || participants.isEmpty()) {
+                                System.out.println("No participants available.");
+                            } else {
+                                System.out.println("\n--- PARTICIPANT LIST ---");
+                                for (Participant p : participants) {
+                                    System.out.println(p);
+                                }
+                            }
+                            break;
+
+                        case 3:
+                            participants = FileHandler.loadParticipants(FILE_PATH);
+
+                            if (participants == null || participants.isEmpty()) {
+                                System.out.println("No participants found. Upload CSV first.");
+                            } else {
+
+                                System.out.print("Enter desired team size: ");
+                                int teamSize = sc.nextInt();
+                                sc.nextLine();
+
+                                teams = TeamBuilder.formTeams(participants, teamSize);
+                                remainingPool = TeamBuilder.getRemainingParticipants();
+
+                                System.out.println("\nTeams Formed Successfully!");
+
+                                for (int i = 0; i < teams.size(); i++) {
+                                    System.out.println("\n======= TEAM " + (i + 1) + " =======");
+                                    for (Participant p : teams.get(i)) {
+                                        System.out.println(p);
+                                    }
+                                }
+
+                                if (!remainingPool.isEmpty()) {
+                                    System.out.println("\nRemaining Unassigned Participants:");
+                                    for (Participant p : remainingPool) {
+                                        System.out.println(p);
+                                    }
+                                }
+                            }
+                            break;
+
+                        case 4:
+                            if (teams == null || teams.isEmpty()) {
+                                System.out.println("Teams not formed yet. Please form teams first.");
+                            } else {
+                                TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
+                                System.out.println("\nTeams saved to: " + OUTPUT_PATH);
+
+                                System.out.println("Returning to main menu...");
+                                organizerRunning = false; // exit organizer panel
+                            }
+                            break;
+
+                        case 5:
+                            organizerRunning = false;
+                            break;
+
+                        default:
+                            System.out.println("Invalid option. Try again!");
+                            break;
+                    }
+                }
+            }
+
+            // ============================= EXIT SYSTEM =============================
+            else if (loginChoice == 3) {
+                System.out.println("\nExiting system... Goodbye!");
+                break;
+            }
+
+            else {
+                System.out.println("Invalid Login Option!");
+            }
         }
 
         sc.close();

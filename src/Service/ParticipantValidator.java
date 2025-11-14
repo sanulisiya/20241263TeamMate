@@ -13,7 +13,7 @@ public class ParticipantValidator {
 
     //  Allowed personality types
     private static final List<String> ALLOWED_PERSONALITIES = Arrays.asList(
-            "Leader", "Thinker", "Balanced"
+            "Leader", "Thinker", "Balanced" ,"Motivator"
     );
 
     //  Email regex

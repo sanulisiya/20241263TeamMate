@@ -23,7 +23,7 @@ public class Pcreator {
             // ---------------- Name Input ----------------
             String name;
             do {
-                name = getNonEmptyInput(sc, "Enter Namee: ");
+                name = getNonEmptyInput(sc, "Enter Name: ");
                 if (!ParticipantValidator.validateName(name)) {
                     System.out.println(" Invalid name. Only letters and spaces allowed (2–50 characters).");
                 }
@@ -74,39 +74,12 @@ public class Pcreator {
             FileHandler.saveParticipant(filePath, p);
             System.out.println("\n Participant added successfully!");
             System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")\n");
+            System.out.println("\n Participant Details:");
+            System.out.println(p); // Uses Participant's toString() method
+            break;
 
-//  After registration — move to next menu (View Details or Exit)
-            boolean continueMenu = true;
-            while (continueMenu) {
-                System.out.println("\n=== Next Step ===");
-                System.out.println("1. View Your Details");
-                System.out.println("2. Exit");
-                System.out.print("Enter your choice: ");
-                String choice = sc.nextLine().trim();
 
-                switch (choice) {
-                    case "1":
-                        System.out.println("\n Participant Details:");
-                        System.out.println(p); // Uses Participant's toString() method
-                        System.exit(1);
-                        break;
-                    case "2":
-                        System.out.println("\n your assinged team is:");
-                        System.out.println("you have not assinged into any team yet");
-                        System.exit(2);
-                        break;
-                    case "3":
-                        System.out.println("\n Thank you for registering! Goodbye.");
-                        continueMenu = false;
-                        System.exit(3);
-                        break;
-                    default:
-                        System.out.println(" Invalid choice. Please enter 1 or 2.");
-                }
-            }
 
-// Stop loop so participant can’t re-register
-            addMore = false;
         }
         }
 

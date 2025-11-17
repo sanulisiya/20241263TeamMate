@@ -52,6 +52,7 @@ public class TeamFileHandler {
                         .append(", Leaders: ").append(leaderCount)
                         .append(", Thinkers: ").append(thinkerCount)
                         .append(", Balanced: ").append(balancedCount)
+                        .append(",Motivator: ").append(balancedCount)
                         .append("\n");
 
                 sb.append("------------------------------------------------------------\n");

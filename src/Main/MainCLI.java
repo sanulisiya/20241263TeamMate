@@ -12,7 +12,7 @@ import java.util.Scanner;
 
 public class MainCLI {
 
-    private static final String FILE_PATH = "C:\\Users\\DELL\\Desktop\\participants_sample.csv";
+    private static final String FILE_PATH = "C:\\Users\\DELL\\Desktop\\participants_sample.csv"    ;
     private static final String OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv";
 
     public static void main(String[] args) {
@@ -134,103 +134,102 @@ public class MainCLI {
 
                 boolean organizerRunning = true;
 
-                while (organizerRunning) {
 
-                    System.out.println("\n--- ORGANIZER PANEL ---");
-                    System.out.println("1. Upload CSV");
-                    System.out.println("2. View All Participants");
-                    System.out.println("3. Formation of Teams");
-                    System.out.println("4. Save Formed Teams");
-                    System.out.println("5. Back to Main Menu");
-                    System.out.print("Select option: ");
+                String uploadedFilePath = null; // track uploaded file by organizer
 
-                    int choice = sc.nextInt();
-                    sc.nextLine();
+                    while (organizerRunning) {
 
-                    switch (choice) {
+                        System.out.println("\n--- ORGANIZER PANEL ---");
+                        System.out.println("1. Upload CSV");
+                        System.out.println("2. View All Participants");
+                        System.out.println("3. Formation of Teams");
+                        System.out.println("4. Save Formed Teams");
+                        System.out.println("5. Back to Main Menu");
+                        System.out.print("Select option: ");
 
-                        case 1:
-                            System.out.print("\nEnter CSV File Path: ");
-                            String path = sc.nextLine();
+                        int choice = sc.nextInt();
+                        sc.nextLine();
 
-                            participants = FileHandler.loadParticipants(path);
+                        switch (choice) {
 
-                            if (participants != null && !participants.isEmpty()) {
-                                System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
-                            } else {
-                                System.out.println("CSV Upload Failed. Check file path!");
-                            }
-                            break; // stay inside organizer menu
+                            case 1:
+                                System.out.print("\nEnter CSV File Path: ");
+                                String path = sc.nextLine();
 
-                        case 2:
-                            participants = FileHandler.loadParticipants(FILE_PATH);
+                                participants = FileHandler.loadParticipants(path);
 
-                            if (participants == null || participants.isEmpty()) {
-                                System.out.println("No participants available.");
-                            } else {
-                                System.out.println("\n--- PARTICIPANT LIST ---");
-                                for (Participant p : participants) {
-                                    System.out.println(p);
+                                if (participants != null && !participants.isEmpty()) {
+                                    uploadedFilePath = path;  // store path!
+                                    System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
+                                } else {
+                                    System.out.println("CSV Upload Failed. Check file path!");
                                 }
-                            }
-                            break;
+                                break;
 
-                        case 3:
-                            participants = FileHandler.loadParticipants(FILE_PATH);
-
-                            if (participants == null || participants.isEmpty()) {
-                                System.out.println("No participants found. Upload CSV first.");
-                            } else {
-
-                                System.out.print("Enter desired team size: ");
-                                int teamSize = sc.nextInt();
-                                sc.nextLine();
-
-                                teams = TeamBuilder.formTeams(participants, teamSize);
-                                remainingPool = TeamBuilder.getRemainingParticipants();
-
-                                System.out.println("\nTeams Formed Successfully!");
-
-                                for (int i = 0; i < teams.size(); i++) {
-                                    System.out.println("\n======= TEAM " + (i + 1) + " =======");
-                                    for (Participant p : teams.get(i)) {
+                            case 2:
+                                if (uploadedFilePath == null) {
+                                    System.out.println("No file uploaded. Please upload a CSV first.");
+                                } else {
+                                    participants = FileHandler.loadParticipants(uploadedFilePath);
+                                    System.out.println("\n--- PARTICIPANT LIST ---");
+                                    for (Participant p : participants) {
                                         System.out.println(p);
                                     }
                                 }
+                                break;
 
-                                if (!remainingPool.isEmpty()) {
-                                    System.out.println("\nRemaining Unassigned Participants:");
-                                    for (Participant p : remainingPool) {
-                                        System.out.println(p);
+
+                            case 3:
+                                if (uploadedFilePath == null) {
+                                    System.out.println("No file uploaded. Upload CSV first.");
+                                } else {
+                                    participants = FileHandler.loadParticipants(uploadedFilePath);
+
+                                    System.out.print("Enter desired team size: ");
+                                    int teamSize = sc.nextInt();
+                                    sc.nextLine();
+
+                                    teams = TeamBuilder.formTeams(participants, teamSize);
+                                    remainingPool = TeamBuilder.getRemainingParticipants();
+
+                                    System.out.println("\nTeams Formed Successfully!");
+                                    for (int i = 0; i < teams.size(); i++) {
+                                        System.out.println("\n======= TEAM " + (i + 1) + " =======");
+                                        for (Participant p : teams.get(i)) {
+                                            System.out.println(p);
+                                        }
+                                    }
+
+                                    if (!remainingPool.isEmpty()) {
+                                        System.out.println("\nRemaining Unassigned Participants:");
+                                        for (Participant p : remainingPool) {
+                                            System.out.println(p);
+                                        }
                                     }
                                 }
-                            }
-                            break;
+                                break;
 
-                        case 4:
-                            if (teams == null || teams.isEmpty()) {
-                                System.out.println("Teams not formed yet. Please form teams first.");
-                            } else {
-                                TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
-                                System.out.println("\nTeams saved to: " + OUTPUT_PATH);
+                            case 4:
+                                if (teams == null || teams.isEmpty()) {
+                                    System.out.println("Teams not formed yet. Please form teams first.");
+                                } else {
+                                    TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
+                                    System.out.println("\nTeams saved to: " + OUTPUT_PATH);
+                                }
+                                break;
 
-                                System.out.println("Returning to main menu...");
-                                organizerRunning = false; // exit organizer panel
-                            }
-                            break;
+                            case 5:
+                                organizerRunning = false;
+                                break;
 
-                        case 5:
-                            organizerRunning = false;
-                            break;
-
-                        default:
-                            System.out.println("Invalid option. Try again!");
-                            break;
+                            default:
+                                System.out.println("Invalid option. Try again!");
+                                break;
+                        }
                     }
-                }
-            }
+                    }
 
-            // ============================= EXIT SYSTEM =============================
+                    // ============================= EXIT SYSTEM =============================
             else if (loginChoice == 3) {
                 System.out.println("\nExiting system... Goodbye!");
                 break;

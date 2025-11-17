@@ -42,7 +42,7 @@ public class Pcreator {
             String preferredGame;
             do {
                 preferredGame = getNonEmptyInput(sc,
-                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton, Chess): ");
+                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton :): ");
                 if (!ParticipantValidator.validateGame(preferredGame)) {
                     System.out.println(" Invalid game selection. Choose from allowed games.");
                 }

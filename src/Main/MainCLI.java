@@ -139,7 +139,8 @@ public class MainCLI {
 
                     while (organizerRunning) {
 
-                        System.out.println("\n--- ORGANIZER PANEL ---");
+                        System.out.println("\n---+" +
+                                "- ORGANIZER PANEL ----");
                         System.out.println("1. Upload CSV");
                         System.out.println("2. View All Participants");
                         System.out.println("3. Formation of Teams");
@@ -194,7 +195,7 @@ public class MainCLI {
 
                                     System.out.println("\nTeams Formed Successfully!");
                                     for (int i = 0; i < teams.size(); i++) {
-                                        System.out.println("\n======= TEAM " + (i + 1) + " =======");
+                                        System.out.println("\n===================== TEAM " + (i + 1) + " =====================");
                                         for (Participant p : teams.get(i)) {
                                             System.out.println(p);
                                         }

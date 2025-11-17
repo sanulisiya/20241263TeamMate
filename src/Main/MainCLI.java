@@ -139,7 +139,7 @@ public class MainCLI {
 
                     while (organizerRunning) {
 
-                        System.out.println("\n--- ORGANIZER PANEL ---");
+                        System.out.println("\n---- ORGANIZER PANEL ----");
                         System.out.println("1. Upload CSV");
                         System.out.println("2. View All Participants");
                         System.out.println("3. Formation of Teams");

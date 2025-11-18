@@ -10,9 +10,8 @@ public class Pcreator {
 
     public static void createNewParticipant(String filePath) {
         Scanner sc = new Scanner(System.in);
-        boolean addMore = true;
 
-        while (addMore) {
+        try { // Minimal try-catch for the whole creation flow
             // Generate unique ID
             int nextId = getNextId(filePath);
             String id = "P" + nextId;
@@ -42,7 +41,7 @@ public class Pcreator {
             String preferredGame;
             do {
                 preferredGame = getNonEmptyInput(sc,
-                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton :): ");
+                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton): ");
                 if (!ParticipantValidator.validateGame(preferredGame)) {
                     System.out.println(" Invalid game selection. Choose from allowed games.");
                 }
@@ -60,10 +59,10 @@ public class Pcreator {
             int personalityScore = Survey.conductPersonalitySurvey();
             String personalityType = Survey.classifyPersonality(personalityScore);
 
-            // Final validation check (redundant but safe)
+            // Final validation check
             if (!ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame, preferredRole, personalityType)) {
                 System.out.println(" Error: Participant data invalid. Restarting entry.");
-                continue;
+                return;
             }
 
             // ---------------- Create Participant Object ----------------
@@ -71,17 +70,20 @@ public class Pcreator {
                     preferredRole, personalityScore, personalityType);
 
             // ---------------- Save to CSV ----------------
-            FileHandler.saveParticipant(filePath, p);
-            System.out.println("\n Participant added successfully!");
-            System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")\n");
-            System.out.println("\n Participant Details:");
-            System.out.println(p); // Uses Participant's toString() method
-            break;
+            try {
+                FileHandler.saveParticipant(filePath, p);
+                System.out.println("\n Participant added successfully!");
+                System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")\n");
+                System.out.println("\n Participant Details:");
+                System.out.println(p); // Uses Participant's toString() method
+            } catch (Exception e) {
+                System.out.println(" Error saving participant. Check file path or permissions.");
+            }
 
-
-
+        } catch (Exception e) {
+            System.out.println(" Unexpected error occurred. Please try again.");
         }
-        }
+    }
 
     // ---------------- Helpers ----------------
     private static int getNextId(String filePath) {
@@ -133,18 +135,18 @@ public class Pcreator {
 
     private static String roleTablePrompt() {
         return """
-            
-            ┌────┬─────────────┬──────────────────────────────────────────────────────────┐
-            │ No │ Role        │ Description                                              │
-            ├────┼─────────────┼──────────────────────────────────────────────────────────┤
-            │ 1  │ Strategist  │ Focuses on tactics, strategy, and game planning.         │
-            │ 2  │ Attacker    │ Frontline player; aggressive and offensive style.        │
-            │ 3  │ Defender    │ Protects, stabilizes, and supports team defense.         │
-            │ 4  │ Supporter   │ Provides boosts, healing, and helps teammates perform.   │
-            │ 5  │ Coordinator │ Communication leader; ensures smooth team coordination.  │
-            └────┴─────────────┴──────────────────────────────────────────────────────────┘
-            
-            Enter role number (1-5): """;
+                
+                ┌────┬─────────────┬──────────────────────────────────────────────────────────┐
+                │ No │ Role        │ Description                                              │
+                ├────┼─────────────┼──────────────────────────────────────────────────────────┤
+                │ 1  │ Strategist  │ Focuses on tactics, strategy, and game planning.         │
+                │ 2  │ Attacker    │ Frontline player; aggressive and offensive style.        │
+                │ 3  │ Defender    │ Protects, stabilizes, and supports team defense.         │
+                │ 4  │ Supporter   │ Provides boosts, healing, and helps teammates perform.   │
+                │ 5  │ Coordinator │ Communication leader; ensures smooth team coordination.  │
+                └────┴─────────────┴──────────────────────────────────────────────────────────┘
+                
+                Enter role number (1-5): """;
     }
 
 }

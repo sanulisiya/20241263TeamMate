@@ -195,7 +195,7 @@ public class MainCLI {
 
                                     System.out.println("\nTeams Formed Successfully!");
                                     for (int i = 0; i < teams.size(); i++) {
-                                        System.out.println("\n===================== TEAM " + (i + 1) + " =====================");
+                                        System.out.println("\n======= TEAM " + (i + 1) + " =======");
                                         for (Participant p : teams.get(i)) {
                                             System.out.println(p);
                                         }

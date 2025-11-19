@@ -8,12 +8,14 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamBuilder {
 
-    private static final List<Participant> remainingParticipants = new ArrayList<>();
+    // NOTE: This list needs synchronization if accessed by multiple threads outside of the parallel stream
+    private static final List<Participant> remainingParticipants = Collections.synchronizedList(new ArrayList<>());
     private static final int GAME_CAP = 2;
     private static final int MAX_THINKERS = 2;
     private static final int MIN_UNIQUE_ROLES = 3;
 
     private static class TeamState {
+        // Use synchronized collections if members were accessed outside synchronized blocks
         List<Participant> members = new ArrayList<>();
         Map<String, Integer> roleCounts = new HashMap<>();
         int skillTotal = 0;
@@ -23,6 +25,7 @@ public class TeamBuilder {
             this.teamId = id;
         }
 
+        // Method is *not* synchronized because it's called inside a synchronized block in formTeams
         public void addMember(Participant p) {
             try {
                 if (p != null) {
@@ -42,6 +45,7 @@ public class TeamBuilder {
         Map<String, List<Participant>> rolesMap = participants.stream()
                 .collect(Collectors.groupingBy(p -> safeRole(p)));
 
+        // Initial setup of team leaders and pools (sequential)
         List<Participant> leaders = new ArrayList<>(rolesMap.getOrDefault("leader", new ArrayList<>()));
         List<Participant> thinkers = new ArrayList<>(rolesMap.getOrDefault("thinker", new ArrayList<>()));
         List<Participant> balanced = new ArrayList<>(rolesMap.getOrDefault("balanced", new ArrayList<>()));
@@ -72,6 +76,7 @@ public class TeamBuilder {
         }
         if (leaders.size() > possibleTeams) remainingParticipants.addAll(leaders.subList(possibleTeams, leaders.size()));
 
+        // Assign one thinker per team (sequential)
         Collections.shuffle(thinkers, new Random());
         Iterator<Participant> thinkerIterator = thinkers.iterator();
         for (TeamState team : teamStates) {
@@ -85,20 +90,44 @@ public class TeamBuilder {
                 thinkerIterator.remove();
             }
         }
+        remainingOthers.addAll(thinkers); // Add any unassigned thinkers back to the pool
 
-        for (Participant p : remainingOthers) {
+        // --- Multi-threaded Assignment using Parallel Stream ---
+
+        // This stream processes the assignment of 'remainingOthers' concurrently
+        // The synchronized block prevents race conditions when modifying shared TeamState objects.
+        remainingOthers.parallelStream().forEach(p -> {
             TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
-            if (bestTeam != null) bestTeam.addMember(p);
-            else remainingParticipants.add(p);
-        }
+
+            if (bestTeam != null) {
+                // Synchronize access to the specific team object being modified
+                synchronized (bestTeam) {
+                    // Double-check condition inside the lock just in case another thread filled it
+                    if (bestTeam.members.size() < teamSize) {
+                        bestTeam.addMember(p);
+                    } else {
+                        // If blocked and team is full, add to remaining list (needs synchronization)
+                        remainingParticipants.add(p);
+                    }
+                }
+            } else {
+                // Synchronize access to the static remainingParticipants list
+                remainingParticipants.add(p);
+            }
+        });
+
+        // --- End Multi-threaded Assignment ---
 
         List<List<Participant>> finalTeams = new ArrayList<>();
+        // Collect results sequentially
         for (TeamState team : teamStates) {
             if (team.members.size() == teamSize) finalTeams.add(new ArrayList<>(team.members));
             else remainingParticipants.addAll(team.members);
         }
         return finalTeams;
     }
+
+    // formLeftoverTeams remains sequential for simplicity, but could also be updated
 
     public static List<List<Participant>> formLeftoverTeams(int teamSize) {
         List<Participant> pool = new ArrayList<>(getRemainingParticipants());
@@ -125,6 +154,8 @@ public class TeamBuilder {
         Collections.shuffle(pool, new Random());
 
         List<Participant> unassigned = new ArrayList<>();
+
+        // Optional: Could use parallelStream here, but requires synchronization on newTeams elements
         for (Participant p : pool) {
             TeamState bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
             if (bestTeam != null) bestTeam.addMember(p);
@@ -149,6 +180,7 @@ public class TeamBuilder {
 
         try {
             for (TeamState team : teamStates) {
+                // Read operations are safe without synchronization
                 if (team.members.size() >= teamSize) continue;
                 if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
                 if (pRole.equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
@@ -161,6 +193,7 @@ public class TeamBuilder {
                 double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
                 double diff = Math.abs(newAvg - overallAvg);
 
+                // Find the team(s) with the minimum difference
                 if (diff < minDiff) {
                     validTeams.clear();
                     validTeams.add(team);

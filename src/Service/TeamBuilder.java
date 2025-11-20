@@ -3,49 +3,54 @@ package Service;
 import model.Participant;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamBuilder {
 
-    // NOTE: This list needs synchronization if accessed by multiple threads outside of the parallel stream
-    private static final List<Participant> remainingParticipants = Collections.synchronizedList(new ArrayList<>());
+    private static final List<Participant> remainingParticipants =
+            Collections.synchronizedList(new ArrayList<>());
+
     private static final int GAME_CAP = 2;
     private static final int MAX_THINKERS = 2;
     private static final int MIN_UNIQUE_ROLES = 3;
 
+    // ============================================================
+    // TEAM STATE (THREAD-SAFE)
+    // ============================================================
     private static class TeamState {
-        // Use synchronized collections if members were accessed outside synchronized blocks
-        List<Participant> members = new ArrayList<>();
-        Map<String, Integer> roleCounts = new HashMap<>();
+
+        final List<Participant> members = new ArrayList<>();
+        final Map<String, Integer> roleCounts = new HashMap<>();
         int skillTotal = 0;
-        int teamId;
+        final int teamId;
 
         public TeamState(int id) {
             this.teamId = id;
         }
 
-        // Method is *not* synchronized because it's called inside a synchronized block in formTeams
         public void addMember(Participant p) {
-            try {
-                if (p != null) {
-                    members.add(p);
-                    skillTotal += safeSkill(p);
-                    String role = safeRole(p);
-                    roleCounts.merge(role, 1, Integer::sum);
-                }
-            } catch (Exception ignored) {}
+            if (p == null) return;
+            members.add(p);
+            skillTotal += safeSkill(p);
+
+            String role = safeRole(p);
+            roleCounts.merge(role, 1, Integer::sum);
         }
     }
 
+    // ============================================================
+    // MAIN TEAM FORMATION (MULTITHREADED)
+    // ============================================================
     public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
+
         remainingParticipants.clear();
-        if (participants == null || participants.isEmpty() || teamSize <= 0) return Collections.emptyList();
+        if (participants == null || participants.isEmpty() || teamSize <= 0)
+            return Collections.emptyList();
 
-        Map<String, List<Participant>> rolesMap = participants.stream()
-                .collect(Collectors.groupingBy(p -> safeRole(p)));
+        Map<String, List<Participant>> rolesMap =
+                participants.stream().collect(Collectors.groupingBy(TeamBuilder::safeRole));
 
-        // Initial setup of team leaders and pools (sequential)
         List<Participant> leaders = new ArrayList<>(rolesMap.getOrDefault("leader", new ArrayList<>()));
         List<Participant> thinkers = new ArrayList<>(rolesMap.getOrDefault("thinker", new ArrayList<>()));
         List<Participant> balanced = new ArrayList<>(rolesMap.getOrDefault("balanced", new ArrayList<>()));
@@ -54,7 +59,9 @@ public class TeamBuilder {
         List<Participant> remainingOthers = new ArrayList<>();
         remainingOthers.addAll(balanced);
         remainingOthers.addAll(motivators);
+
         Collections.shuffle(remainingOthers, new Random());
+        Collections.shuffle(leaders, new Random());
 
         int possibleTeams = Math.min(leaders.size(), participants.size() / teamSize);
         if (possibleTeams == 0) {
@@ -62,184 +69,227 @@ public class TeamBuilder {
             return Collections.emptyList();
         }
 
-        double overallAvg = participants.stream()
-                .mapToInt(TeamBuilder::safeSkill)
-                .average()
-                .orElse(0);
+        double overallAvg = participants.stream().mapToInt(TeamBuilder::safeSkill).average().orElse(0);
 
         List<TeamState> teamStates = new ArrayList<>();
-        Collections.shuffle(leaders, new Random());
         for (int i = 0; i < possibleTeams; i++) {
             TeamState state = new TeamState(i);
             state.addMember(leaders.get(i));
             teamStates.add(state);
         }
-        if (leaders.size() > possibleTeams) remainingParticipants.addAll(leaders.subList(possibleTeams, leaders.size()));
 
-        // Assign one thinker per team (sequential)
+        if (leaders.size() > possibleTeams)
+            remainingParticipants.addAll(leaders.subList(possibleTeams, leaders.size()));
+
+        // Assign one thinker per team
         Collections.shuffle(thinkers, new Random());
         Iterator<Participant> thinkerIterator = thinkers.iterator();
         for (TeamState team : teamStates) {
             if (!thinkerIterator.hasNext()) break;
-            Participant thinker = thinkerIterator.next();
-            if (team.members.size() < teamSize && countGame(team.members, thinker.getPreferredGame()) < GAME_CAP) {
-                team.addMember(thinker);
-                thinkerIterator.remove();
+            Participant th = thinkerIterator.next();
+
+            if (team.members.size() < teamSize &&
+                    countGame(team.members, th.getPreferredGame()) < GAME_CAP) {
+                team.addMember(th);
             } else {
-                remainingOthers.add(0, thinker);
-                thinkerIterator.remove();
+                remainingOthers.add(0, th);
             }
+            thinkerIterator.remove();
         }
-        remainingOthers.addAll(thinkers); // Add any unassigned thinkers back to the pool
 
-        // --- Multi-threaded Assignment using Parallel Stream ---
+        remainingOthers.addAll(thinkers);
 
-        // This stream processes the assignment of 'remainingOthers' concurrently
-        // The synchronized block prevents race conditions when modifying shared TeamState objects.
-        remainingOthers.parallelStream().forEach(p -> {
-            TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
+        // ============================================================
+        // MULTITHREADED ASSIGNMENT USING THREAD POOL
+        // ============================================================
 
-            if (bestTeam != null) {
-                // Synchronize access to the specific team object being modified
-                synchronized (bestTeam) {
-                    // Double-check condition inside the lock just in case another thread filled it
-                    if (bestTeam.members.size() < teamSize) {
-                        bestTeam.addMember(p);
-                    } else {
-                        // If blocked and team is full, add to remaining list (needs synchronization)
+        ExecutorService executor = Executors.newFixedThreadPool(
+                Runtime.getRuntime().availableProcessors()
+        );
+
+        List<Future<?>> futures = new ArrayList<>();
+
+        for (Participant p : remainingOthers) {
+            futures.add(executor.submit(() -> {
+
+                TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
+
+                if (bestTeam != null) {
+                    synchronized (bestTeam) {
+                        if (bestTeam.members.size() < teamSize) {
+                            bestTeam.addMember(p);
+                        } else {
+                            synchronized (remainingParticipants) {
+                                remainingParticipants.add(p);
+                            }
+                        }
+                    }
+                } else {
+                    synchronized (remainingParticipants) {
                         remainingParticipants.add(p);
                     }
                 }
-            } else {
-                // Synchronize access to the static remainingParticipants list
-                remainingParticipants.add(p);
-            }
-        });
-
-        // --- End Multi-threaded Assignment ---
-
-        List<List<Participant>> finalTeams = new ArrayList<>();
-        // Collect results sequentially
-        for (TeamState team : teamStates) {
-            if (team.members.size() == teamSize) finalTeams.add(new ArrayList<>(team.members));
-            else remainingParticipants.addAll(team.members);
+            }));
         }
+
+        // Wait for all tasks
+        for (Future<?> f : futures) {
+            try { f.get(); } catch (Exception ignored) {}
+        }
+
+        executor.shutdown();
+
+        // ============================================================
+        // BUILD FINAL TEAMS
+        // ============================================================
+        List<List<Participant>> finalTeams = new ArrayList<>();
+
+        for (TeamState team : teamStates) {
+            if (team.members.size() == teamSize)
+                finalTeams.add(new ArrayList<>(team.members));
+            else
+                remainingParticipants.addAll(team.members);
+        }
+
         return finalTeams;
     }
 
-    // formLeftoverTeams remains sequential for simplicity, but could also be updated
-
+    // ============================================================
+    // LEFTOVER TEAM FORMATION (SEQUENTIAL - OPTIONAL TO PARALLELIZE)
+    // ============================================================
     public static List<List<Participant>> formLeftoverTeams(int teamSize) {
+
         List<Participant> pool = new ArrayList<>(getRemainingParticipants());
-        if (teamSize <= 0 || pool.size() < teamSize) return Collections.emptyList();
+        if (pool.size() < teamSize) return Collections.emptyList();
 
-        double poolAvgSkill = pool.stream()
-                .mapToInt(TeamBuilder::safeSkill)
-                .average()
-                .orElse(0);
+        double avg = pool.stream().mapToInt(TeamBuilder::safeSkill).average().orElse(0);
 
-        int maxNewTeams = pool.size() / teamSize;
-        List<TeamState> newTeams = new ArrayList<>();
+        int maxTeams = pool.size() / teamSize;
+        List<TeamState> teams = new ArrayList<>();
+
         pool.sort(Comparator.comparingInt(TeamBuilder::safeSkill).reversed());
-        List<Participant> tempPool = new ArrayList<>(pool);
+        List<Participant> temp = new ArrayList<>(pool);
         pool.clear();
 
-        for (int i = 0; i < maxNewTeams; i++) {
-            if (tempPool.isEmpty()) break;
-            TeamState state = new TeamState(newTeams.size() + 100);
-            state.addMember(tempPool.remove(0));
-            newTeams.add(state);
+        for (int i = 0; i < maxTeams; i++) {
+            if (temp.isEmpty()) break;
+
+            TeamState t = new TeamState(i + 100);
+            t.addMember(temp.remove(0));
+            teams.add(t);
         }
-        pool.addAll(tempPool);
-        Collections.shuffle(pool, new Random());
+
+        pool.addAll(temp);
+        Collections.shuffle(pool);
 
         List<Participant> unassigned = new ArrayList<>();
 
-        // Optional: Could use parallelStream here, but requires synchronization on newTeams elements
         for (Participant p : pool) {
-            TeamState bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
-            if (bestTeam != null) bestTeam.addMember(p);
+            TeamState t = findBestLeftoverTeam(teams, p, avg, teamSize);
+            if (t != null) t.addMember(p);
             else unassigned.add(p);
         }
 
-        List<List<Participant>> finalNewTeams = new ArrayList<>();
+        List<List<Participant>> finalTeams = new ArrayList<>();
         remainingParticipants.clear();
-        for (TeamState team : newTeams) {
-            if (team.members.size() == teamSize) finalNewTeams.add(new ArrayList<>(team.members));
-            else remainingParticipants.addAll(team.members);
+
+        for (TeamState t : teams) {
+            if (t.members.size() == teamSize)
+                finalTeams.add(new ArrayList<>(t.members));
+            else
+                remainingParticipants.addAll(t.members);
         }
+
         remainingParticipants.addAll(unassigned);
-        return finalNewTeams;
+
+        return finalTeams;
     }
 
-    private static TeamState findBestTeamForParticipant(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {
+    // ============================================================
+    // TEAM SELECTION HELPERS
+    // ============================================================
+    private static TeamState findBestTeamForParticipant(List<TeamState> teams, Participant p,
+                                                        double avg, int teamSize) {
+
         if (p == null) return null;
+
+        List<TeamState> candidates = new ArrayList<>();
+        double bestDiff = Double.MAX_VALUE;
+
         String pRole = safeRole(p);
-        List<TeamState> validTeams = new ArrayList<>();
-        double minDiff = Double.MAX_VALUE;
 
-        try {
-            for (TeamState team : teamStates) {
-                // Read operations are safe without synchronization
-                if (team.members.size() >= teamSize) continue;
-                if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
-                if (pRole.equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
+        for (TeamState t : teams) {
+            if (t.members.size() >= teamSize) continue;
+            if (countGame(t.members, p.getPreferredGame()) >= GAME_CAP) continue;
 
-                Map<String, Integer> roles = team.roleCounts;
-                int uniqueRoles = roles.size();
-                boolean addsNewRole = !roles.containsKey(pRole);
-                if (!addsNewRole && uniqueRoles >= MIN_UNIQUE_ROLES && (pRole.equals("leader") || pRole.equals("thinker"))) continue;
+            if (pRole.equals("thinker") && t.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS)
+                continue;
 
-                double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
-                double diff = Math.abs(newAvg - overallAvg);
+            boolean addsNewRole = !t.roleCounts.containsKey(pRole);
+            if (!addsNewRole && t.roleCounts.size() >= MIN_UNIQUE_ROLES &&
+                    (pRole.equals("leader") || pRole.equals("thinker")))
+                continue;
 
-                // Find the team(s) with the minimum difference
-                if (diff < minDiff) {
-                    validTeams.clear();
-                    validTeams.add(team);
-                    minDiff = diff;
-                } else if (diff == minDiff) validTeams.add(team);
+            double newAvg = (double) (t.skillTotal + safeSkill(p)) / (t.members.size() + 1);
+            double diff = Math.abs(newAvg - avg);
+
+            if (diff < bestDiff) {
+                candidates.clear();
+                candidates.add(t);
+                bestDiff = diff;
+            } else if (diff == bestDiff) {
+                candidates.add(t);
             }
-        } catch (Exception ignored) {}
+        }
 
-        if (!validTeams.isEmpty()) return validTeams.get(ThreadLocalRandom.current().nextInt(validTeams.size()));
-        return null;
+        if (candidates.isEmpty()) return null;
+
+        return candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
     }
 
-    private static TeamState findBestLeftoverTeam(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {
+    private static TeamState findBestLeftoverTeam(List<TeamState> teams, Participant p,
+                                                  double avg, int teamSize) {
+
         if (p == null) return null;
-        List<TeamState> validTeams = new ArrayList<>();
-        double minDiff = Double.MAX_VALUE;
 
-        try {
-            for (TeamState team : teamStates) {
-                if (team.members.size() >= teamSize) continue;
-                if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
-                if (safeRole(p).equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
+        List<TeamState> candidates = new ArrayList<>();
+        double best = Double.MAX_VALUE;
 
-                double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
-                double diff = Math.abs(newAvg - overallAvg);
+        for (TeamState t : teams) {
+            if (t.members.size() >= teamSize) continue;
+            if (countGame(t.members, p.getPreferredGame()) >= GAME_CAP) continue;
 
-                if (diff < minDiff) {
-                    validTeams.clear();
-                    validTeams.add(team);
-                    minDiff = diff;
-                } else if (diff == minDiff) validTeams.add(team);
+            double newAvg = (double) (t.skillTotal + safeSkill(p)) / (t.members.size() + 1);
+            double diff = Math.abs(newAvg - avg);
+
+            if (diff < best) {
+                candidates.clear();
+                candidates.add(t);
+                best = diff;
+            } else if (diff == best) {
+                candidates.add(t);
             }
-        } catch (Exception ignored) {}
+        }
 
-        if (!validTeams.isEmpty()) return validTeams.get(ThreadLocalRandom.current().nextInt(validTeams.size()));
-        return null;
+        if (candidates.isEmpty()) return null;
+
+        return candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
     }
 
-    private static int countGame(List<Participant> team, String game) {
+    private static int countGame(List<Participant> members, String game) {
         if (game == null) return 0;
+
         int count = 0;
-        for (Participant p : team)
-            if (p.getPreferredGame() != null && p.getPreferredGame().equalsIgnoreCase(game)) count++;
+        for (Participant p : members)
+            if (game.equalsIgnoreCase(p.getPreferredGame()))
+                count++;
+
         return count;
     }
 
+    // ============================================================
+    // UTILITY HELPERS
+    // ============================================================
     public static List<Participant> getRemainingParticipants() {
         return new ArrayList<>(remainingParticipants);
     }
@@ -254,7 +304,7 @@ public class TeamBuilder {
         if (p == null) return 0;
         try {
             return p.getSkillLevel();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
             return 0;
         }
     }

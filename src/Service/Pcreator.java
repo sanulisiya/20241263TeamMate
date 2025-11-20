@@ -1,6 +1,8 @@
 package Service;
 
 import model.Participant;
+import model.Validator;
+import model.PersonalityAssessment;
 import java.util.*;
 import java.io.*;
 
@@ -11,7 +13,7 @@ public class Pcreator {
     public static void createNewParticipant(String filePath) {
         Scanner sc = new Scanner(System.in);
 
-        try { // Minimal try-catch for the whole creation flow
+        try {
             // Generate unique ID
             int nextId = getNextId(filePath);
             String id = "P" + nextId;
@@ -23,36 +25,36 @@ public class Pcreator {
             String name;
             do {
                 name = getNonEmptyInput(sc, "Enter Name: ");
-                if (!ParticipantValidator.validateName(name)) {
-                    System.out.println(" Invalid name. Only letters and spaces allowed (2–50 characters).");
+                if (!Validator.isValidName(name)) { // ✅ CHANGED
+                    System.out.println(" Invalid name. Only letters and spaces allowed (2-50 characters).");
                 }
-            } while (!ParticipantValidator.validateName(name));
+            } while (!Validator.isValidName(name)); // ✅ CHANGED
 
             // ---------------- Email Input ----------------
             String email;
             do {
                 email = getNonEmptyInput(sc, "Enter Email: ");
-                if (!ParticipantValidator.validateEmail(email)) {
+                if (!Validator.isValidEmail(email)) { // ✅ CHANGED
                     System.out.println(" Invalid email format. Please try again.");
                 }
-            } while (!ParticipantValidator.validateEmail(email));
+            } while (!Validator.isValidEmail(email)); // ✅ CHANGED
 
             // ---------------- Preferred Game ----------------
             String preferredGame;
             do {
                 preferredGame = getNonEmptyInput(sc,
-                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton): ");
-                if (!ParticipantValidator.validateGame(preferredGame)) {
+                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton, Chess): ");
+                if (!Validator.isValidGame(preferredGame)) { // ✅ CHANGED
                     System.out.println(" Invalid game selection. Choose from allowed games.");
                 }
-            } while (!ParticipantValidator.validateGame(preferredGame));
+            } while (!Validator.isValidGame(preferredGame)); // ✅ CHANGED
 
             // ---------------- Role Selection ----------------
             int roleSelection = getValidatedInt(sc, roleTablePrompt(), 1, 5);
             String preferredRole = ALLOWED_ROLES[roleSelection - 1];
 
             // ---------------- Skill Level ----------------
-            int skillLevel = getValidatedInt(sc, "Enter Skill Level (1–10): ", 1, 10);
+            int skillLevel = getValidatedInt(sc, "Enter Skill Level (1-10): ", 1, 10);
 
             // ---------------- Personality Survey ----------------
             System.out.println("\nNow, let's complete the 5-question Personality Survey:");
@@ -60,7 +62,7 @@ public class Pcreator {
             String personalityType = Survey.classifyPersonality(personalityScore);
 
             // Final validation check
-            if (!ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame, preferredRole, personalityType)) {
+            if (!Validator.validateParticipant(name, email, skillLevel, preferredGame, preferredRole, personalityType)) { // ✅ CHANGED
                 System.out.println(" Error: Participant data invalid. Restarting entry.");
                 return;
             }
@@ -72,10 +74,10 @@ public class Pcreator {
             // ---------------- Save to CSV ----------------
             try {
                 FileHandler.saveParticipant(filePath, p);
-                System.out.println("\n Participant added successfully!");
+                System.out.println("\n✅ Participant added successfully!");
                 System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")\n");
-                System.out.println("\n Participant Details:");
-                System.out.println(p); // Uses Participant's toString() method
+                System.out.println("\n✅ Participant Details:");
+                System.out.println(p);
             } catch (Exception e) {
                 System.out.println(" Error saving participant. Check file path or permissions.");
             }
@@ -127,7 +129,7 @@ public class Pcreator {
                 if (value >= min && value <= max) break;
                 System.out.println(" Value must be between " + min + " and " + max + ".");
             } catch (NumberFormatException e) {
-                System.out.println(" Invalid number. Enter a numeric value.");
+                System.out.println("Invalid number. Enter a numeric value.");
             }
         }
         return value;
@@ -136,17 +138,16 @@ public class Pcreator {
     private static String roleTablePrompt() {
         return """
                 
-                ┌────┬─────────────┬──────────────────────────────────────────────────────────┐
-                │ No │ Role        │ Description                                              │
-                ├────┼─────────────┼──────────────────────────────────────────────────────────┤
-                │ 1  │ Strategist  │ Focuses on tactics, strategy, and game planning.         │
-                │ 2  │ Attacker    │ Frontline player; aggressive and offensive style.        │
-                │ 3  │ Defender    │ Protects, stabilizes, and supports team defense.         │
-                │ 4  │ Supporter   │ Provides boosts, healing, and helps teammates perform.   │
-                │ 5  │ Coordinator │ Communication leader; ensures smooth team coordination.  │
-                └────┴─────────────┴──────────────────────────────────────────────────────────┘
+                ┌────┬─────────────┬──────────────────────────────────────────────────────┐
+                │ No │ Role        │ Description                                          │
+                ├────┼─────────────┼──────────────────────────────────────────────────────┤
+                │ 1  │ Strategist  │ Focuses on tactics, strategy, and game planning.     │
+                │ 2  │ Attacker    │ Frontline player; aggressive and offensive style.    │
+                │ 3  │ Defender    │ Protects, stabilizes, and supports team defense.     │
+                │ 4  │ Supporter   │ Provides boosts, healing, and helps teammates.       │
+                │ 5  │ Coordinator │ Communication leader; ensures smooth coordination.   │
+                └────┴─────────────┴──────────────────────────────────────────────────────┘
                 
                 Enter role number (1-5): """;
     }
-
 }

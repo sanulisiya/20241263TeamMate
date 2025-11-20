@@ -1,4 +1,4 @@
-package model;
+package utility;
 
 import java.util.Arrays;
 import java.util.List;
@@ -66,19 +66,13 @@ public class Validator {
                 .anyMatch(p -> p.equalsIgnoreCase(type.trim()));
     }
 
-    // Validate preferred role (non-empty)
-    public static boolean isValidRole(String role) {
-        return role != null && !role.trim().isEmpty();
-    }
-
     // Full participant validation
     public static boolean validateParticipant(String name, String email, int skill,
-                                              String game, String role, String personalityType) {
+                                              String game, String personalityType) {
         return isValidName(name) &&
                 isValidEmail(email) &&
                 isValidSkillLevel(skill) &&
                 isValidGame(game) &&
-                isValidRole(role) &&
                 isValidPersonalityType(personalityType);
     }
 

@@ -24,7 +24,7 @@ public class Survey {
             boolean valid = false;
 
             while (!valid) {
-                System.out.print(q + " → Your answer (1–5): ");
+                System.out.print(q + " →  Your answer (1-5): ");
                 String input = sc.nextLine().trim();
 
                 try {

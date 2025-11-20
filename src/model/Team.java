@@ -51,7 +51,7 @@ public class Team {
     // Count how many members have the same role
     public long countRole(String role) {
         return members.stream()
-                .filter(p -> p.getPreferredRole().equalsIgnoreCase(role))
+                .filter(p -> p.getPreferredRole().equalsIgnoreCase(String.valueOf(GameRole.valueOf(role))))
                 .count();
     }
 

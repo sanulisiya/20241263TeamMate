@@ -1,10 +1,8 @@
-package Main;
-
 import model.Participant;
-import Service.FileHandler;
-import Service.Pcreator;
+import service.FileHandler;
+import service.Pcreator;
 import Service.TeamBuilder;
-import Service.TeamFileHandler;
+import service.TeamFileHandler;
 
 import java.util.ArrayList;
 import java.util.InputMismatchException;
@@ -13,9 +11,11 @@ import java.util.Scanner;
 
 public class MainCLI {
 
-    // NOTE: Replace these with actual, valid file paths on your system
     private static final String FILE_PATH = "C:\\Users\\DELL\\Desktop\\participants_sample.csv";
     private static final String OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv";
+
+    // Organizer login PIN
+    private static final String ORGANIZER_PIN = "1234";
 
     public static void main(String[] args) {
 
@@ -72,7 +72,7 @@ public class MainCLI {
                         continue;
                     }
 
-                    // ---- EXISTING PARTICIPANT LOGIN (Uses Multi-Threaded FileHandler) ----
+                    // ---- EXISTING PARTICIPANT LOGIN ----
                     else if (participantChoice == 2) {
                         System.out.print("Enter Participant ID: ");
                         String participantId = sc.nextLine().trim();
@@ -111,6 +111,7 @@ public class MainCLI {
                                     System.out.println("\nTeams have not been formed yet. Please check later!");
                                 } else {
                                     boolean foundTeam = false;
+
                                     for (int i = 0; i < formattedTeams.size(); i++) {
                                         List<Participant> team = formattedTeams.get(i);
                                         for (Participant teammate : team) {
@@ -126,6 +127,7 @@ public class MainCLI {
                                         }
                                         if (foundTeam) break;
                                     }
+
                                     if (!foundTeam) {
                                         System.out.println("\nYou are not assigned to any team yet.");
                                     }
@@ -134,6 +136,7 @@ public class MainCLI {
 
                             System.out.println("\nReturning to main menu...\n");
                             continue;
+
                         } else {
                             System.out.println("\nParticipant not found. Returning to main menu...");
                             continue;
@@ -146,6 +149,18 @@ public class MainCLI {
 
                 // ============================= ORGANIZER FLOW =============================
                 else if (loginChoice == 2) {
+
+                    // Ask for PIN before continuing
+                    System.out.print("\nEnter Organizer PIN: ");
+                    String pin = sc.nextLine().trim();
+
+                    if (!pin.equals(ORGANIZER_PIN)) {
+                        System.out.println(" Incorrect PIN. Returning to main menu...\n");
+                        continue;
+                    }
+
+                    System.out.println("\n PIN Verified! Access Granted.");
+
                     boolean organizerRunning = true;
                     String uploadedFilePath = null;
 
@@ -174,7 +189,6 @@ public class MainCLI {
                                     System.out.print("\nEnter CSV File Path: ");
                                     String path = sc.nextLine();
                                     try {
-                                        // Uses the multi-threaded FileHandler
                                         participants = FileHandler.loadParticipants(path);
                                         if (participants != null && !participants.isEmpty()) {
                                             uploadedFilePath = path;
@@ -192,7 +206,6 @@ public class MainCLI {
                                         System.out.println("No file uploaded. Please upload a CSV first.");
                                     } else {
                                         try {
-                                            // Uses the multi-threaded FileHandler
                                             participants = FileHandler.loadParticipants(uploadedFilePath);
                                             System.out.println("\n--- PARTICIPANT LIST ---");
                                             for (Participant p : participants) {
@@ -211,7 +224,6 @@ public class MainCLI {
                                     }
 
                                     try {
-                                        // Uses the multi-threaded FileHandler
                                         participants = FileHandler.loadParticipants(uploadedFilePath);
                                     } catch (Exception e) {
                                         System.out.println("Error loading participants: " + e.getMessage());
@@ -232,30 +244,24 @@ public class MainCLI {
                                     boolean arranging = true;
                                     while (arranging) {
                                         try {
-                                            // Uses the multi-threaded TeamBuilder
                                             teams = TeamBuilder.formTeams(participants, teamSize);
                                             remainingPool = TeamBuilder.getRemainingParticipants();
 
                                             System.out.println("\n================== MAIN TEAMS ==================");
                                             for (int i = 0; i < teams.size(); i++) {
-                                                System.out.println("\n------------------------------------------------------------------------------------------------");
                                                 System.out.println("\n======= TEAM " + (i + 1) + " =======");
                                                 for (Participant p : teams.get(i)) {
                                                     System.out.println(p);
                                                 }
                                             }
 
-                                            // Form leftover teams
+                                            // leftover
                                             List<List<Participant>> leftoverTeams = new ArrayList<>();
                                             if (!remainingPool.isEmpty()) {
                                                 leftoverTeams = TeamBuilder.formLeftoverTeams(teamSize);
                                                 remainingPool = TeamBuilder.getRemainingParticipants();
 
                                                 if (!leftoverTeams.isEmpty()) {
-                                                    System.out.println("\n\"The initial strict team-building rules assigned the core teams." +
-                                                            " \nThe following Leftover Teams were formed by prioritizing team size and overall skill balance," +
-                                                            " \nrelaxing strict rules like role limits and game caps to accommodate the remaining participants.");
-
                                                     System.out.println("\n================== LEFTOVER TEAMS ==================");
                                                     int offset = teams.size();
                                                     for (int i = 0; i < leftoverTeams.size(); i++) {
@@ -267,7 +273,6 @@ public class MainCLI {
                                                 }
                                             }
 
-                                            // Remaining unassigned
                                             if (!remainingPool.isEmpty()) {
                                                 System.out.println("\nRemaining Unassigned Participants:");
                                                 for (Participant p : remainingPool) {
@@ -275,7 +280,6 @@ public class MainCLI {
                                                 }
                                             }
 
-                                            // Ask for rearrangement
                                             System.out.print("\nDo you want to rearrange teams? (yes/no): ");
                                             String rearrange = sc.nextLine().trim().toLowerCase();
                                             if (rearrange.equals("yes")) {
@@ -289,7 +293,6 @@ public class MainCLI {
                                                 TeamBuilder.getRemainingParticipants().clear();
                                                 System.out.println("\nRearranging teams...\n");
                                             } else {
-                                                // Merge all teams for saving
                                                 teams.addAll(leftoverTeams);
                                                 arranging = false;
                                             }

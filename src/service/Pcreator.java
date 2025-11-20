@@ -1,8 +1,6 @@
-package Service;
+package service;
 
 import model.Participant;
-import model.Validator;
-import model.PersonalityAssessment;
 import java.util.*;
 import java.io.*;
 
@@ -13,7 +11,7 @@ public class Pcreator {
     public static void createNewParticipant(String filePath) {
         Scanner sc = new Scanner(System.in);
 
-        try {
+        try { // Minimal try-catch for the whole creation flow
             // Generate unique ID
             int nextId = getNextId(filePath);
             String id = "P" + nextId;
@@ -25,29 +23,29 @@ public class Pcreator {
             String name;
             do {
                 name = getNonEmptyInput(sc, "Enter Name: ");
-                if (!Validator.isValidName(name)) { // ✅ CHANGED
-                    System.out.println(" Invalid name. Only letters and spaces allowed (2-50 characters).");
+                if (!service.ParticipantValidator.validateName(name)) {
+                    System.out.println(" Innvalid name. Only letters and spaces allowed (2-50 characters).");
                 }
-            } while (!Validator.isValidName(name)); // ✅ CHANGED
+            } while (!service.ParticipantValidator.validateName(name));
 
             // ---------------- Email Input ----------------
             String email;
             do {
                 email = getNonEmptyInput(sc, "Enter Email: ");
-                if (!Validator.isValidEmail(email)) { // ✅ CHANGED
+                if (!service.ParticipantValidator.validateEmail(email)) {
                     System.out.println(" Invalid email format. Please try again.");
                 }
-            } while (!Validator.isValidEmail(email)); // ✅ CHANGED
+            } while (!service.ParticipantValidator.validateEmail(email));
 
             // ---------------- Preferred Game ----------------
             String preferredGame;
             do {
                 preferredGame = getNonEmptyInput(sc,
-                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton, Chess): ");
-                if (!Validator.isValidGame(preferredGame)) { // ✅ CHANGED
+                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton): ");
+                if (!service.ParticipantValidator.validateGame(preferredGame)) {
                     System.out.println(" Invalid game selection. Choose from allowed games.");
                 }
-            } while (!Validator.isValidGame(preferredGame)); // ✅ CHANGED
+            } while (!service.ParticipantValidator.validateGame(preferredGame));
 
             // ---------------- Role Selection ----------------
             int roleSelection = getValidatedInt(sc, roleTablePrompt(), 1, 5);
@@ -58,11 +56,11 @@ public class Pcreator {
 
             // ---------------- Personality Survey ----------------
             System.out.println("\nNow, let's complete the 5-question Personality Survey:");
-            int personalityScore = Survey.conductPersonalitySurvey();
-            String personalityType = Survey.classifyPersonality(personalityScore);
+            int personalityScore = Service.Survey.conductPersonalitySurvey();
+            String personalityType = Service.Survey.classifyPersonality(personalityScore);
 
             // Final validation check
-            if (!Validator.validateParticipant(name, email, skillLevel, preferredGame, preferredRole, personalityType)) { // ✅ CHANGED
+            if (!service.ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame, preferredRole, personalityType)) {
                 System.out.println(" Error: Participant data invalid. Restarting entry.");
                 return;
             }
@@ -73,11 +71,11 @@ public class Pcreator {
 
             // ---------------- Save to CSV ----------------
             try {
-                FileHandler.saveParticipant(filePath, p);
-                System.out.println("\n✅ Participant added successfully!");
+                service.FileHandler.saveParticipant(filePath, p);
+                System.out.println("\n Participant added successfully!");
                 System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")\n");
-                System.out.println("\n✅ Participant Details:");
-                System.out.println(p);
+                System.out.println("\n Participant Details:");
+                System.out.println(p); // Uses Participant's toString() method
             } catch (Exception e) {
                 System.out.println(" Error saving participant. Check file path or permissions.");
             }
@@ -129,7 +127,7 @@ public class Pcreator {
                 if (value >= min && value <= max) break;
                 System.out.println(" Value must be between " + min + " and " + max + ".");
             } catch (NumberFormatException e) {
-                System.out.println("Invalid number. Enter a numeric value.");
+                System.out.println(" Invalid number. Enter a numeric value.");
             }
         }
         return value;
@@ -150,4 +148,5 @@ public class Pcreator {
                 
                 Enter role number (1-5): """;
     }
+
 }

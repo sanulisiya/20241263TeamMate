@@ -1,4 +1,4 @@
-package Service;
+package service;
 
 import model.Participant;
 import java.io.FileWriter;
@@ -55,7 +55,7 @@ public class TeamFileHandler {
                         .append(",Motivator: ").append(balancedCount)
                         .append("\n");
 
-                sb.append("------------------------------------------------------------\n");
+                sb.append("---------------------------------------------------------------\n");
             }
 
             writer.write(sb.toString());

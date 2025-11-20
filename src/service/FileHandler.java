@@ -1,4 +1,4 @@
-package Service;
+package service;
 
 import model.Participant;
 import java.io.*;

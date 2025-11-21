@@ -1,6 +1,8 @@
 package service;
 
 import model.Participant;
+import model.PersonalityType;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
@@ -38,9 +40,9 @@ public class TeamFileHandler {
                     totalSkill += p.getSkillLevel();
 
                     // Count personality types
-                    String type = p.getPersonalityType().toLowerCase();
-                    if (type.contains("leader")) leaderCount++;
-                    else if (type.contains("thinker")) thinkerCount++;
+                    PersonalityType type = p.getPersonalityType();
+                    if (type.equals(PersonalityType.LEADER)) leaderCount++;
+                    else if (type.equals(PersonalityType.THINKER)) thinkerCount++;
                     else balancedCount++;
                 }
 

@@ -1,4 +1,4 @@
-package Service;
+package service;
 
 import model.Participant;
 
@@ -246,7 +246,7 @@ public class TeamBuilder {
 
     private static String safeRole(Participant p) {
         if (p == null) return "unknown";
-        String r = p.getPersonalityType();
+        String r = String.valueOf(p.getPersonalityType());
         return (r == null) ? "unknown" : r.toLowerCase();
     }
 

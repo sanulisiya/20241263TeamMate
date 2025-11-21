@@ -1,6 +1,6 @@
 package model;
 
-public enum GameRole {
+public enum RoleType {
     // Each constant has an assigned description
     STRATEGIST(
             "Focuses on tactics and planning. Keeps the bigger picture in mind during gameplay."
@@ -22,7 +22,7 @@ public enum GameRole {
     private final String description;
 
     // Enum constructor
-    private GameRole(String description) {
+    private RoleType(String description) {
         this.description = description;
     }
 
@@ -31,7 +31,7 @@ public enum GameRole {
         return description;
     }
 
-    public boolean equalsIgnoreCase(GameRole role) {
+    public boolean equalsIgnoreCase(RoleType role) {
 
         return false;
     }

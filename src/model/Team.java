@@ -49,9 +49,9 @@ public class Team {
     }
 
     // Count how many members have the same role
-    public long countRole(String role) {
+    public long countRole(RoleType role) {
         return members.stream()
-                .filter(p -> p.getPreferredRole().equalsIgnoreCase(String.valueOf(GameRole.valueOf(role))))
+                .filter(p -> p.getPreferredRole().equals(role))
                 .count();
     }
 
@@ -73,7 +73,7 @@ public class Team {
         boolean hasSameRole = members.stream()
                 .anyMatch(p -> p.getPreferredRole().equalsIgnoreCase(newMember.getPreferredRole()));
         boolean hasSamePersonality = members.stream()
-                .anyMatch(p -> p.getPersonalityType().equalsIgnoreCase(newMember.getPersonalityType()));
+                .anyMatch(p -> p.getPersonalityType().equals(newMember.getPersonalityType()));
 
         double bonus = 0;
         if (!hasSameGame) bonus += 30;

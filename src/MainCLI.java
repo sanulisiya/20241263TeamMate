@@ -1,7 +1,7 @@
 import model.Participant;
 import service.FileHandler;
-import service.Pcreator;
-import Service.TeamBuilder;
+import service.ParticipantCreator;
+import service.TeamBuilder;
 import service.TeamFileHandler;
 
 import java.util.ArrayList;
@@ -63,7 +63,7 @@ public class MainCLI {
                     // ---- ADD NEW PARTICIPANT ----
                     if (participantChoice == 1) {
                         try {
-                            Pcreator.createNewParticipant(FILE_PATH);
+                            ParticipantCreator.createNewParticipant(FILE_PATH);
                             System.out.println("\nParticipant added successfully!");
                         } catch (Exception e) {
                             System.out.println("Failed to add participant: " + e.getMessage());
@@ -74,7 +74,7 @@ public class MainCLI {
 
                     // ---- EXISTING PARTICIPANT LOGIN ----
                     else if (participantChoice == 2) {
-                        System.out.print("Enter Participant ID: ");
+                        System.out.print("Enter Participant ID : ");
                         String participantId = sc.nextLine().trim();
                         try {
                             participants = FileHandler.loadParticipants(FILE_PATH);
@@ -336,9 +336,7 @@ public class MainCLI {
                 else if (loginChoice == 3) {
                     System.out.println("\nExiting system... Goodbye!");
                     break;
-                }
-
-                else {
+                } else {
                     System.out.println("Invalid Login Option!");
                 }
 

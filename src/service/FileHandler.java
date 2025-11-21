@@ -1,17 +1,17 @@
 package service;
 
 import model.Participant;
+import model.RoleType;
+import model.PersonalityType;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 public class FileHandler {
 
     // --- Threading Configuration ---
     private static final int CHUNK_SIZE = 1024 * 1024; // 1MB chunk size
-    // Use a fixed pool size, or: Runtime.getRuntime().availableProcessors()
     private static final int THREAD_POOL_SIZE = 4;
 
     /**
@@ -63,20 +63,83 @@ public class FileHandler {
             if (data.length < 8) return;
 
             try {
+
+                // Convert string to GameRole enum
+                RoleType preferredRole = parseGameRole(data[5].trim());
+
+                // Convert string to PersonalityType enum
+                PersonalityType personalityType = parsePersonalityType(data[7].trim());
+
+                if (!ParticipantValidator.validateID(data[0].trim())) {
+                    System.out.println("Invalid ID: " + data[0].trim());
+                    return;
+                }
+
+                if (!ParticipantValidator.validateName(data[1].trim())){
+                    System.out.println("Invalid name: " + data[1].trim());
+                    return;
+
+                }
+                if (!ParticipantValidator.validateEmail(data[2].trim())) {
+                    System.out.println("Invalid email: " + data[2].trim());
+                    return;
+                }
+                if (!ParticipantValidator.validateGame(data[3].trim())) {
+                    System.out.println("Invalid Preffered gmae: " + data[3].trim());
+                    return;
+                }
+                if (!ParticipantValidator.validateSkillLevel(Integer.parseInt(data[4].trim()))) {
+                    System.out.println("Invalid skill level : " + data[4].trim());
+                    return;
+                }
+                if (!ParticipantValidator.validateRole((data[5].trim()))) {
+                    System.out.println("Invalid preffered role: " + data[5].trim());
+                    return;
+                }
+                if (!ParticipantValidator.validatePersonalityScore(Integer.parseInt(data[6].trim()))) {
+                    System.out.println("Invalid persoonality type score : " + data[6].trim());
+                    return;
+                }
+                if (!ParticipantValidator.validatePersonalityType((data[7].trim()))) {
+                    System.out.println("Invalid personality type: " + data[7].trim());
+                    return;
+                }
+
+
+
                 Participant p = new Participant(
                         data[0].trim(),
                         data[1].trim(),
                         data[2].trim(),
                         data[3].trim(),
                         Integer.parseInt(data[4].trim()),
-                        data[5].trim(),
+                        preferredRole,
                         Integer.parseInt(data[6].trim()),
-                        data[7].trim()
+                        personalityType
                 );
                 participants.add(p);
             } catch (Exception e) {
                 // Log error without stopping the thread
                 System.err.println(" Skipping invalid participant row in thread: " + line);
+                System.err.println(" Error: " + e.getMessage());
+            }
+        }
+
+        private RoleType parseGameRole(String roleString) {
+            try {
+                return RoleType.valueOf(roleString.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                System.err.println("Invalid game role: " + roleString + ", defaulting to STRATEGIST");
+                return RoleType.STRATEGIST; // Default value
+            }
+        }
+
+        private PersonalityType parsePersonalityType(String typeString) {
+            try {
+                return PersonalityType.valueOf(typeString.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                System.err.println("Invalid personality type: " + typeString + ", defaulting to BALANCED");
+                return PersonalityType.BALANCED; // Default value
             }
         }
     }
@@ -135,7 +198,7 @@ public class FileHandler {
         return allParticipants;
     }
 
-    // --- Original Single-Threaded Methods (Unchanged) ---
+    // --- Updated Single-Threaded Methods ---
 
     // Append new participant
     public static void saveParticipant(String filePath, Participant participant) {
@@ -146,9 +209,9 @@ public class FileHandler {
                             participant.getEmail() + "," +
                             participant.getPreferredGame() + "," +
                             participant.getSkillLevel() + "," +
-                            participant.getPreferredRole() + "," +
+                            participant.getPreferredRole().name() + "," + // Use enum name
                             participant.getPersonalityScore() + "," +
-                            participant.getPersonalityType() + "\n"
+                            participant.getPersonalityType().name() + "\n" // Use enum name
             );
         } catch (IOException e) {
             System.err.println(" Error writing to file: " + e.getMessage());
@@ -181,28 +244,32 @@ public class FileHandler {
                 }
 
                 try {
+                    // Convert string to GameRole enum
+                    RoleType preferredRole = parseGameRole(data[6].trim());
+
+                    // Convert string to PersonalityType enum
+                    PersonalityType personalityType = parsePersonalityType(data[8].trim());
+
+
                     Participant p = new Participant(
                             data[1].trim(),
                             data[2].trim(),
                             data[3].trim(),
                             data[4].trim(),
                             Integer.parseInt(data[5].trim()),
-                            data[6].trim(),
+                            preferredRole,  // Now using GameRole enum
                             Integer.parseInt(data[7].trim()),
-                            data[8].trim()
+                            personalityType  // Now using PersonalityType enum
                     );
 
-                    // store team number (if field exists)
-                    try {
-                        var teamField = Participant.class.getDeclaredField("teamId");
-                        teamField.setAccessible(true);
-                        teamField.setInt(p, teamNumber);
-                    } catch (Exception ignored) {}
+                    // Set team number using the setter method
+                    p.setTeamNumber(String.valueOf(teamNumber));
 
                     teamMap.computeIfAbsent(teamNumber, k -> new ArrayList<>()).add(p);
 
                 } catch (Exception e) {
                     System.err.println(" Skipping invalid team row: " + line);
+                    System.err.println(" Error: " + e.getMessage());
                 }
             }
 
@@ -213,5 +280,24 @@ public class FileHandler {
         }
 
         return teams;
+    }
+
+    // Helper methods for parsing enums from strings
+    private static RoleType parseGameRole(String roleString) {
+        try {
+            return RoleType.valueOf(roleString.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid game role: " + roleString + ", defaulting to STRATEGIST");
+            return RoleType.STRATEGIST; // Default value
+        }
+    }
+
+    private static PersonalityType parsePersonalityType(String typeString) {
+        try {
+            return PersonalityType.valueOf(typeString.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid personality type: " + typeString + ", defaulting to BALANCED");
+            return PersonalityType.BALANCED; // Default value
+        }
     }
 }

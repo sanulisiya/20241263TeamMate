@@ -1,87 +1,103 @@
 package service;
 
 import model.Participant;
+import model.RoleType;
+import model.PersonalityType;
 import java.util.*;
 import java.io.*;
 
-public class Pcreator {
+public class ParticipantCreator {
 
-    private static final String[] ALLOWED_ROLES = {"Strategist", "Attacker", "Defender", "Supporter", "Coordinator"};
+    private static final RoleType[] ALLOWED_ROLES = {
+            RoleType.STRATEGIST, RoleType.ATTACKER, RoleType.DEFENDER,
+            RoleType.SUPPORTER, RoleType.COORDINATOR
+    };
 
     public static void createNewParticipant(String filePath) {
         Scanner sc = new Scanner(System.in);
 
-        try { // Minimal try-catch for the whole creation flow
+        try {
             // Generate unique ID
-            int nextId = getNextId(filePath);
-            String id = "P" + nextId;
+//            int nextId = getNextId(filePath);
+//            String id = "P" + nextId;
 
             System.out.println("\n=== Add New Participant ===");
-            System.out.println("Assigned Participant ID: " + id);
+//            System.out.println("Assigned Participant ID: " + id);
 
             // ---------------- Name Input ----------------
             String name;
+            String id;
+            do{
+                id = getNonEmptyInput(sc, " Enter ID");
+                if (!ParticipantValidator.validateName(id)) {
+                    System.out.println(" Invalid ID. Only letters and numbers allowed (2-10 characters).");
+                }
+
+            }  while (!ParticipantValidator.validateName(id));
             do {
                 name = getNonEmptyInput(sc, "Enter Name: ");
-                if (!service.ParticipantValidator.validateName(name)) {
-                    System.out.println(" Innvalid name. Only letters and spaces allowed (2-50 characters).");
+                if (!ParticipantValidator.validateName(name)) {
+                    System.out.println(" Invalid name. Only letters and spaces allowed (2-50 characters).");
                 }
-            } while (!service.ParticipantValidator.validateName(name));
+            } while (!ParticipantValidator.validateName(name));
 
             // ---------------- Email Input ----------------
             String email;
             do {
                 email = getNonEmptyInput(sc, "Enter Email: ");
-                if (!service.ParticipantValidator.validateEmail(email)) {
+                if (!ParticipantValidator.validateEmail(email)) {
                     System.out.println(" Invalid email format. Please try again.");
                 }
-            } while (!service.ParticipantValidator.validateEmail(email));
+            } while (!ParticipantValidator.validateEmail(email));
 
             // ---------------- Preferred Game ----------------
             String preferredGame;
             do {
                 preferredGame = getNonEmptyInput(sc,
                         "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton): ");
-                if (!service.ParticipantValidator.validateGame(preferredGame)) {
+                if (!ParticipantValidator.validateGame(preferredGame)) {
                     System.out.println(" Invalid game selection. Choose from allowed games.");
                 }
-            } while (!service.ParticipantValidator.validateGame(preferredGame));
+            } while (!ParticipantValidator.validateGame(preferredGame));
 
             // ---------------- Role Selection ----------------
             int roleSelection = getValidatedInt(sc, roleTablePrompt(), 1, 5);
-            String preferredRole = ALLOWED_ROLES[roleSelection - 1];
+            RoleType preferredRole = ALLOWED_ROLES[roleSelection - 1]; // Now using GameRole enum
 
             // ---------------- Skill Level ----------------
             int skillLevel = getValidatedInt(sc, "Enter Skill Level (1-10): ", 1, 10);
 
             // ---------------- Personality Survey ----------------
             System.out.println("\nNow, let's complete the 5-question Personality Survey:");
-            int personalityScore = Service.Survey.conductPersonalitySurvey();
-            String personalityType = Service.Survey.classifyPersonality(personalityScore);
+            int personalityScore = Survey.conductPersonalitySurvey();
+            PersonalityType personalityType = PersonalityType.valueOf(Survey.classifyPersonality(personalityScore)); // Now using PersonalityType enum
 
-            // Final validation check
-            if (!service.ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame, preferredRole, personalityType)) {
+            // Final validation check - use enum names for validation
+            if (!ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame,
+                    preferredRole.name(), personalityType.name())) {
                 System.out.println(" Error: Participant data invalid. Restarting entry.");
                 return;
             }
 
             // ---------------- Create Participant Object ----------------
             Participant p = new Participant(id, name, email, preferredGame, skillLevel,
-                    preferredRole, personalityScore, personalityType);
+                    preferredRole, personalityScore, personalityType); // Now using enums
 
             // ---------------- Save to CSV ----------------
             try {
-                service.FileHandler.saveParticipant(filePath, p);
+                FileHandler.saveParticipant(filePath, p);
                 System.out.println("\n Participant added successfully!");
-                System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")\n");
+                System.out.println("Personality Type: " + personalityType.name() + " (" + personalityScore + ")\n");
                 System.out.println("\n Participant Details:");
                 System.out.println(p); // Uses Participant's toString() method
             } catch (Exception e) {
                 System.out.println(" Error saving participant. Check file path or permissions.");
+                System.out.println(" Error details: " + e.getMessage());
             }
 
         } catch (Exception e) {
             System.out.println(" Unexpected error occurred. Please try again.");
+            System.out.println(" Error details: " + e.getMessage());
         }
     }
 
@@ -134,19 +150,23 @@ public class Pcreator {
     }
 
     private static String roleTablePrompt() {
-        return """
+        return String.format("""
                 
                 ┌────┬─────────────┬──────────────────────────────────────────────────────┐
                 │ No │ Role        │ Description                                          │
                 ├────┼─────────────┼──────────────────────────────────────────────────────┤
-                │ 1  │ Strategist  │ Focuses on tactics, strategy, and game planning.     │
-                │ 2  │ Attacker    │ Frontline player; aggressive and offensive style.    │
-                │ 3  │ Defender    │ Protects, stabilizes, and supports team defense.     │
-                │ 4  │ Supporter   │ Provides boosts, healing, and helps teammates.       │
-                │ 5  │ Coordinator │ Communication leader; ensures smooth coordination.   │
+                │ 1  │ Strategist  │ %-52s │
+                │ 2  │ Attacker    │ %-52s │
+                │ 3  │ Defender    │ %-52s │
+                │ 4  │ Supporter   │ %-52s │
+                │ 5  │ Coordinator │ %-52s │
                 └────┴─────────────┴──────────────────────────────────────────────────────┘
                 
-                Enter role number (1-5): """;
+                Enter role number (1-5): """,
+                RoleType.STRATEGIST.getDescription(),
+                RoleType.ATTACKER.getDescription(),
+                RoleType.DEFENDER.getDescription(),
+                RoleType.SUPPORTER.getDescription(),
+                RoleType.COORDINATOR.getDescription());
     }
-
 }

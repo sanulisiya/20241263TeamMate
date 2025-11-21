@@ -1,14 +1,17 @@
 package service;
 
+import java.net.IDN;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
 public class ParticipantValidator {
 
+
+
     //  Allowed games (canonical names)
     private static final List<String> ALLOWED_GAMES = Arrays.asList(
-            "Valorant", "Dota", "FIFA", "Basketball", "Badminton", "Chess"
+            "Valorant", "Dota","DOTA 2","FIFA", "Basketball", "Badminton", "Chess","CS:GO"
     );
 
     //  Allowed personality types
@@ -23,10 +26,20 @@ public class ParticipantValidator {
 
     //  Name regex: letters and spaces, 2â€“50 chars
     private static final Pattern NAME_PATTERN = Pattern.compile(
-            "^[A-Za-z ]{2,50}$"
+            "^[A-Za-z0-9_ ]+$"
+    );
+    private static final Pattern ID_PATTERN = Pattern.compile(
+            "^P\\d{3}$"
     );
 
+
+
+    public static boolean validateID(String id) {
+        return id != null && ID_PATTERN.matcher(id).matches();
+    }
+
     //  Validate name
+
     public static boolean validateName(String name) {
         return name != null && NAME_PATTERN.matcher(name).matches();
     }
@@ -36,10 +49,11 @@ public class ParticipantValidator {
         return email != null && EMAIL_PATTERN.matcher(email).matches();
     }
 
-    //  Validate skill level (1â€“10)
-    public static boolean validateSkillLevel(int skill) {
-        return skill >= 1 && skill <= 10;
+    //  Validate skill level (1 to 10)
+    public static boolean validateSkillLevel(int skillLevel) {
+        return skillLevel >= 0 && skillLevel <= 10;
     }
+
 
     //  Validate game (case-insensitive)
     public static boolean validateGame(String game) {

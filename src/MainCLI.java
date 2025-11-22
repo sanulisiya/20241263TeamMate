@@ -74,7 +74,7 @@ public class MainCLI {
 
                     // ---- EXISTING PARTICIPANT LOGIN ----
                     else if (participantChoice == 2) {
-                        System.out.print("Enter Participant ID : ");
+                        System.out.print("Enter Participant ID :  ");
                         String participantId = sc.nextLine().trim();
                         try {
                             participants = FileHandler.loadParticipants(FILE_PATH);

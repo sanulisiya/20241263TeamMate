@@ -70,7 +70,7 @@ public class ParticipantCreator {
             // ---------------- Personality Survey ----------------
             System.out.println("\nNow, let's complete the 5-question Personality Survey:");
             int personalityScore = Survey.conductPersonalitySurvey();
-            PersonalityType personalityType = PersonalityType.valueOf(Survey.classifyPersonality(personalityScore)); // Now using PersonalityType enum
+            PersonalityType personalityType = PersonalityType.valueOf(Survey.classifyPersonality(personalityScore).toUpperCase()); // Now using PersonalityType enum
 
             // Final validation check - use enum names for validation
             if (!ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame,

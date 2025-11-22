@@ -95,9 +95,12 @@ public class ParticipantValidator {
 
 
     // Full participant validation
-    public static boolean validateParticipant(String name, String email, int skill, String game, String role, String personalityType) {
+    public static boolean validateParticipant(String id ,String name, String email, int skill, String game, String role, String personalityType) {
         int validatePersonalityScore = 0;
-        return validateName(name) &&
+
+        return
+                validateID(id)&&
+                validateName(name) &&
                 validateEmail(email) &&
                 validateSkillLevel(skill) &&
                 validateGame(game) &&

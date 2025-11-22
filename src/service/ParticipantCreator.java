@@ -24,16 +24,19 @@ public class ParticipantCreator {
             System.out.println("\n=== Add New Participant ===");
 //            System.out.println("Assigned Participant ID: " + id);
 
-            // ---------------- Name Input ----------------
-            String name;
+
+
             String id;
             do{
-                id = getNonEmptyInput(sc, " Enter ID");
-                if (!ParticipantValidator.validateName(id)) {
-                    System.out.println(" Invalid ID. Only letters and numbers allowed (2-10 characters).");
+                id = getNonEmptyInput(sc, " Enter ID :");
+                if (!ParticipantValidator.validateID(id)) {
+                    System.out.println(" Invalid ID. Only letter P and   numbers allowed (2-10 characters).");
                 }
 
-            }  while (!ParticipantValidator.validateName(id));
+            }  while (!ParticipantValidator.validateID(id));
+
+            // ---------------- Name Input ----------------
+            String name;
             do {
                 name = getNonEmptyInput(sc, "Enter Name: ");
                 if (!ParticipantValidator.validateName(name)) {
@@ -73,7 +76,7 @@ public class ParticipantCreator {
             PersonalityType personalityType = PersonalityType.valueOf(Survey.classifyPersonality(personalityScore).toUpperCase()); // Now using PersonalityType enum
 
             // Final validation check - use enum names for validation
-            if (!ParticipantValidator.validateParticipant(name, email, skillLevel, preferredGame,
+            if (!ParticipantValidator.validateParticipant(id,name, email, skillLevel, preferredGame,
                     preferredRole.name(), personalityType.name())) {
                 System.out.println(" Error: Participant data invalid. Restarting entry.");
                 return;
@@ -101,26 +104,26 @@ public class ParticipantCreator {
         }
     }
 
-    // ---------------- Helpers ----------------
-    private static int getNextId(String filePath) {
-        int maxId = 0;
-        try (Scanner fileScanner = new Scanner(new File(filePath))) {
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine();
-                if (line.trim().isEmpty()) continue;
-                String[] parts = line.split(",");
-                if (parts.length > 0) {
-                    String idStr = parts[0].replaceAll("[^0-9]", "");
-                    if (!idStr.isEmpty()) {
-                        int num = Integer.parseInt(idStr);
-                        if (num > maxId) maxId = num;
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return maxId + 1;
-    }
+//    // ---------------- Helpers ----------------
+//    private static int getNextId(String filePath) {
+//        int maxId = 0;
+//        try (Scanner fileScanner = new Scanner(new File(filePath))) {
+//            while (fileScanner.hasNextLine()) {
+//                String line = fileScanner.nextLine();
+//                if (line.trim().isEmpty()) continue;
+//                String[] parts = line.split(",");
+//                if (parts.length > 0) {
+//                    String idStr = parts[0].replaceAll("[^0-9]", "");
+//                    if (!idStr.isEmpty()) {
+//                        int num = Integer.parseInt(idStr);
+//                        if (num > maxId) maxId = num;
+//                    }
+//                }
+//            }
+//        } catch (Exception ignored) {
+//        }
+//        return maxId + 1;
+//    }
 
     private static String getNonEmptyInput(Scanner sc, String prompt) {
         String input;
@@ -151,17 +154,16 @@ public class ParticipantCreator {
 
     private static String roleTablePrompt() {
         return String.format("""
-                
-                ┌────┬─────────────┬──────────────────────────────────────────────────────┐
-                │ No │ Role        │ Description                                          │
-                ├────┼─────────────┼──────────────────────────────────────────────────────┤
-                │ 1  │ Strategist  │ %-52s │
-                │ 2  │ Attacker    │ %-52s │
-                │ 3  │ Defender    │ %-52s │
-                │ 4  │ Supporter   │ %-52s │
-                │ 5  │ Coordinator │ %-52s │
-                └────┴─────────────┴──────────────────────────────────────────────────────┘
-                
+                 
+                                     ┌────┬─────────────┬──────────────────────────────────────────────────────┐
+                                     │ No │ Role        │ Description                                          │
+                                     ├────┼─────────────┼──────────────────────────────────────────────────────┤
+                                     │ 1  │ Strategist  │ Focuses on tactics and planning. Keeps the bigger pi │
+                                     │ 2  │ Attacker    │ Frontline player. Good reflexes, offensive tactics,  │
+                                     │ 3  │ Defender    │ Protects and supports team stability. Good under pre │
+                                     │ 4  │ Supporter   │ Jack-of-all-trades. Adapts roles, ensures smooth coo │
+                                     │ 5  │ Coordinator │ Communication lead. Keeps the team informed and orga │
+                                     └────┴─────────────┴──────────────────────────────────────────────────────┘
                 Enter role number (1-5): """,
                 RoleType.STRATEGIST.getDescription(),
                 RoleType.ATTACKER.getDescription(),

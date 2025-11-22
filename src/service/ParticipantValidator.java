@@ -29,7 +29,7 @@ public class ParticipantValidator {
             "^[A-Za-z0-9_ ]+$"
     );
     private static final Pattern ID_PATTERN = Pattern.compile(
-            "^P\\d{3}$"
+            "^[Pp]\\d{3}$"
     );
 
 

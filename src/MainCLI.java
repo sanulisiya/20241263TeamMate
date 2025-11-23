@@ -246,91 +246,89 @@ public class MainCLI {
                                     }
                                     break;
 
-                                case 3: // Team Formation
-                                    if (participants.isEmpty()) {
-                                        System.out.println("Cannot form teams. Please load participants (Option 1) first.");
+                                case 3:
+                                    if (uploadedFilePath == null) {
+                                        System.out.println("No file uploaded. Upload CSV first.");
                                         break;
                                     }
 
-                                    boolean keepArranging = true;
+                                    try {
+                                        participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
+                                    } catch (Exception e) {
+                                        System.out.println("Error loading participants: " + e.getMessage());
+                                        break;
+                                    }
 
-                                    while (keepArranging) {
-                                        // Ask for team size
-                                        int teamSize = 0;
-                                        while (true) {
-                                            System.out.print("Enter the desired team size (N): ");
-                                            String input = sc.nextLine().trim();
-                                            if (input.isEmpty()) {
-                                                System.out.println("Please enter a valid number.");
-                                                continue;
-                                            }
-                                            try {
-                                                teamSize = Integer.parseInt(input);
-                                                if (teamSize <= 1 || teamSize > participants.size()) {
-                                                    System.out.println("Invalid team size. Must be > 1 and <= total participants (" + participants.size() + ").");
-                                                } else {
-                                                    break;
+                                    int teamSize = 0;
+                                    System.out.print("Enter desired team size: ");
+                                    try {
+                                        teamSize = sc.nextInt();
+                                        sc.nextLine();
+                                    } catch (InputMismatchException e) {
+                                        System.out.println("Invalid input. Please enter a number.");
+                                        sc.nextLine();
+                                        break;
+                                    }
+
+                                    boolean arranging = true;
+                                    while (arranging) {
+                                        try {
+                                            teams = TeamBuilder.formTeams(participants, teamSize);
+                                            remainingPool = TeamBuilder.getRemainingParticipants();
+
+                                            System.out.println("\n================== MAIN TEAMS ==================");
+                                            for (int i = 0; i < teams.size(); i++) {
+                                                System.out.println("\n======= TEAM " + (i + 1) + " =======");
+                                                for (Participant p : teams.get(i)) {
+                                                    System.out.println(p);
                                                 }
-                                            } catch (NumberFormatException e) {
-                                                System.out.println("Please enter a valid number.");
                                             }
-                                        }
 
-                                        System.out.println("\nForming teams with " + teamSize + " members per team...");
-                                        teams = TeamBuilder.formTeams(participants, teamSize);
+                                            // leftover
+                                            List<List<Participant>> leftoverTeams = new ArrayList<>();
+                                            if (!remainingPool.isEmpty()) {
+                                                leftoverTeams = TeamBuilder.formLeftoverTeams(teamSize);
+                                                remainingPool = TeamBuilder.getRemainingParticipants();
 
-                                        remainingPool = TeamBuilder.getRemainingParticipants();
-
-                                        // Display formed teams
-                                        if (teams != null && !teams.isEmpty()) {
-                                            System.out.println("\n TEAMS FORMED SUCCESSFULLY");
-                                            System.out.println("Total teams formed: " + teams.size());
-                                            System.out.println("Team size: " + teamSize + " members");
-
-                                            int teamId = 1;
-                                            for (List<Participant> team : teams) {
-                                                System.out.printf("\n*** TEAM %d (Size: %d) ***\n", teamId, team.size());
-                                                System.out.println("------------------------------------------------");
-                                                for (Participant member : team) {
-                                                    System.out.println("  " + member.getName() + " (" + member.getId() + ")");
-                                                    System.out.println("    Game: " + member.getPreferredGame() +
-                                                            " | Skill: " + member.getSkillLevel() +
-                                                            " | Role: " + member.getPreferredRole() +
-                                                            " | Personality: " + member.getPersonalityType());
+                                                if (!leftoverTeams.isEmpty()) {
+                                                    System.out.println("\n================== LEFTOVER TEAMS ==================");
+                                                    int offset = teams.size();
+                                                    for (int i = 0; i < leftoverTeams.size(); i++) {
+                                                        System.out.println("\n======= TEAM " + (offset + i + 1) + " =======");
+                                                        for (Participant p : leftoverTeams.get(i)) {
+                                                            System.out.println(p);
+                                                        }
+                                                    }
                                                 }
-                                                teamId++;
                                             }
-                                            TeamBuilder.printFormationStats(teams, participants);
-                                        } else {
-                                            System.out.println("\n Could not form any complete teams with size " + teamSize + ".");
-                                        }
 
-                                        // Show remaining participants
-                                        if (remainingPool != null && !remainingPool.isEmpty()) {
-                                            System.out.println("\n REMAINING PARTICIPANTS (could not fit into full teams):");
-                                            System.out.println("Total remaining: " + remainingPool.size());
-                                            for (Participant p : remainingPool) {
-                                                System.out.println("  " + p.getName() + " (ID: " + p.getId() +
-                                                        ", Skill: " + p.getSkillLevel() +
-                                                        ", Game: " + p.getPreferredGame() + ")");
+                                            if (!remainingPool.isEmpty()) {
+                                                System.out.println("\nRemaining Unassigned Participants:");
+                                                for (Participant p : remainingPool) {
+                                                    System.out.println(p);
+                                                }
                                             }
-                                        }
 
-                                        // Ask if user wants to rearrange
-                                        while (true) {
-                                            System.out.print("\nDo you want to REARRANGE teams with a different team size? (yes/no): ");
-                                            String answer = sc.nextLine().trim().toLowerCase();
-                                            if (answer.equals("yes") || answer.equals("y")) {
-                                                System.out.println("Starting fresh team formation...\n");
-                                                TeamBuilder.clearRemainingParticipants(); // Clean internal state
-                                                break; // Loop again — ask for team size again
-                                            } else if (answer.equals("no") || answer.equals("n")) {
-                                                System.out.println("Teams finalized! Returning to organizer menu.\n");
-                                                keepArranging = false;
-                                                break;
+                                            System.out.print("\nDo you want to rearrange teams? (yes/no): ");
+                                            String rearrange = sc.nextLine().trim().toLowerCase();
+                                            if (rearrange.equals("yes")) {
+                                                participants = new ArrayList<>();
+                                                for (List<Participant> t : teams) participants.addAll(t);
+                                                for (List<Participant> t : leftoverTeams) participants.addAll(t);
+                                                participants.addAll(remainingPool);
+
+                                                teams.clear();
+                                                remainingPool.clear();
+                                                TeamBuilder.getRemainingParticipants().clear();
+                                                System.out.println("\nRearranging teams...\n");
                                             } else {
-                                                System.out.println("Please type 'yes' or 'no'.");
+                                                teams.addAll(leftoverTeams);
+                                                arranging = false;
                                             }
+
+                                        } catch (Exception e) {
+                                            System.out.println("Error forming teams: " + e.getMessage());
+                                            arranging = false;
                                         }
                                     }
                                     break;
@@ -341,7 +339,7 @@ public class MainCLI {
                                     } else {
                                         try {
                                             TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
-                                            System.out.println("\n Teams successfully saved to: " + OUTPUT_PATH);
+                                            System.out.println("\nTeams successfully saved to: " + OUTPUT_PATH);
                                             System.out.println("Total teams saved: " + teams.size());
                                             System.out.println("Participants can now view their assigned teams in the participant menu.");
                                         } catch (Exception e) {
@@ -431,7 +429,7 @@ public class MainCLI {
         Map<String, Long> personalityCount = team.stream()
                 .collect(Collectors.groupingBy(p -> p.getPersonalityType().name(), Collectors.counting()));
 
-        System.out.println("\n📊 Team Statistics:");
+        System.out.println("\n Team Statistics:");
         System.out.printf("   Average Skill Level: %.2f/10\n", avgSkill);
         System.out.println("   Game Distribution: " + formatMap(gameCount));
         System.out.println("   Role Distribution: " + formatMap(roleCount));
@@ -440,15 +438,15 @@ public class MainCLI {
 
         // Check for team balance
         if (personalityCount.containsKey("LEADER")) {
-            System.out.println("    Has a Leader");
+            System.out.println("  Has a Leader");
         } else {
-            System.out.println("     No Leader in team");
+            System.out.println(" No Leader in team");
         }
 
         if (personalityCount.containsKey("THINKER") && personalityCount.get("THINKER") >= 1) {
-            System.out.println("   Has Thinker(s)");
+            System.out.println("  Has Thinker(s)");
         } else {
-            System.out.println("   No Thinker in team");
+            System.out.println(" No Thinker in team");
         }
     }
 

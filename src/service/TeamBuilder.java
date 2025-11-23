@@ -1,221 +1,341 @@
 package service;
 
 import model.Participant;
-import model.PersonalityType;
-import model.RoleType;
-import model.Team;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamBuilder {
 
-    private static final int MAX_GAME_PER_TEAM = 2;
-    private static final int REQUIRED_THINKERS_MIN = 1;
-    private static final int REQUIRED_THINKERS_MAX = 2;
+    // NOTE: This list needs synchronization if accessed by multiple threads outside of the parallel stream
+    private static final List<Participant> remainingParticipants = Collections.synchronizedList(new ArrayList<>());
+    private static final int GAME_CAP = 2;
+    private static final int MAX_THINKERS = 2;
+    private static final int MIN_UNIQUE_ROLES = 3;
 
-    private static List<Participant> remainingParticipants = new ArrayList<>();
+    private static class TeamState {
+        // Use synchronized collections if members were accessed outside synchronized blocks
+        List<Participant> members = new ArrayList<>();
+        Map<String, Integer> roleCounts = new HashMap<>();
+        int skillTotal = 0;
+        int teamId;
 
-    // Main method to form teams
-    public static List<List<Participant>> formTeams(List<Participant> originalList, int teamSize) {
+        public TeamState(int id) {
+            this.teamId = id;
+        }
+
+        // Method is *not* synchronized because it's called inside a synchronized block in formTeams
+        public void addMember(Participant p) {
+            try {
+                if (p != null) {
+                    members.add(p);
+                    skillTotal += safeSkill(p);
+                    String role = safeRole(p);
+                    roleCounts.merge(role, 1, Integer::sum);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
+    public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
         remainingParticipants.clear();
+        if (participants == null || participants.isEmpty() || teamSize <= 0) return Collections.emptyList();
 
-        if (originalList == null || originalList.isEmpty() || teamSize <= 1) {
+        Map<String, List<Participant>> rolesMap = participants.stream()
+                .collect(Collectors.groupingBy(p -> safeRole(p)));
+
+        // Initial setup of team leaders and pools (sequential)
+        List<Participant> leaders = new ArrayList<>(rolesMap.getOrDefault("leader", new ArrayList<>()));
+        List<Participant> thinkers = new ArrayList<>(rolesMap.getOrDefault("thinker", new ArrayList<>()));
+        List<Participant> balanced = new ArrayList<>(rolesMap.getOrDefault("balanced", new ArrayList<>()));
+        List<Participant> motivators = new ArrayList<>(rolesMap.getOrDefault("motivator", new ArrayList<>()));
+
+        List<Participant> remainingOthers = new ArrayList<>();
+        remainingOthers.addAll(balanced);
+        remainingOthers.addAll(motivators);
+        Collections.shuffle(remainingOthers, new Random());
+
+        int possibleTeams = Math.min(leaders.size(), participants.size() / teamSize);
+        if (possibleTeams == 0) {
+            remainingParticipants.addAll(participants);
             return Collections.emptyList();
         }
 
-        int numTeams = originalList.size() / teamSize;
-        if (numTeams == 0) {
-            remainingParticipants.addAll(originalList);
-            return Collections.emptyList();
+        double overallAvg = participants.stream()
+                .mapToInt(TeamBuilder::safeSkill)
+                .average()
+                .orElse(0);
+
+        List<TeamState> teamStates = new ArrayList<>();
+        Collections.shuffle(leaders, new Random());
+        for (int i = 0; i < possibleTeams; i++) {
+            TeamState state = new TeamState(i);
+            state.addMember(leaders.get(i));
+            teamStates.add(state);
         }
+        if (leaders.size() > possibleTeams) remainingParticipants.addAll(leaders.subList(possibleTeams, leaders.size()));
 
-        List<Participant> pool = new ArrayList<>(originalList);
-        List<Team> teams = initializeTeams(numTeams);
-
-        // Sort pool: Leaders > Thinkers > Balanced > Motivators
-        sortPoolByPriority(pool);
-
-        // Assign Leaders
-        assignLeaders(pool, teams, teamSize);
-
-        // Assign Thinkers
-        assignThinkers(pool, teams, teamSize);
-
-        // Fill remaining slots with other participants
-        assignRemainingParticipants(pool, teams, teamSize);
-
-        // Remaining participants (who couldn't fit)
-        remainingParticipants.addAll(pool.stream()
-                .filter(p -> p.getTeamNumber() == null || p.getTeamNumber().isEmpty())
-                .collect(Collectors.toList()));
-
-        // Convert to List<List<Participant>> for CSV saving
-        return teams.stream()
-                .filter(team -> team.size() == teamSize)
-                .map(Team::getMembers)
-                .collect(Collectors.toList());
-    }
-
-    // -------------------- Helper Methods --------------------
-
-    private static List<Team> initializeTeams(int numTeams) {
-        List<Team> teams = new ArrayList<>();
-        for (int i = 1; i <= numTeams; i++) {
-            teams.add(new Team(i));
+        // Assign one thinker per team (sequential)
+        Collections.shuffle(thinkers, new Random());
+        Iterator<Participant> thinkerIterator = thinkers.iterator();
+        for (TeamState team : teamStates) {
+            if (!thinkerIterator.hasNext()) break;
+            Participant thinker = thinkerIterator.next();
+            if (team.members.size() < teamSize && countGame(team.members, thinker.getPreferredGame()) < GAME_CAP) {
+                team.addMember(thinker);
+                thinkerIterator.remove();
+            } else {
+                remainingOthers.add(0, thinker);
+                thinkerIterator.remove();
+            }
         }
-        return teams;
-    }
+        remainingOthers.addAll(thinkers); // Add any unassigned thinkers back to the pool
 
-    private static void sortPoolByPriority(List<Participant> pool) {
-        pool.sort(Comparator
-                .<Participant>comparingInt(p -> {
-                    switch (p.getPersonalityType()) {
-                        case LEADER: return 4;
-                        case THINKER: return 3;
-                        case BALANCED: return 2;
-                        default: return 1; // MOTIVATOR
+        // --- Multi-threaded Assignment using Parallel Stream ---
+
+        // This stream processes the assignment of 'remainingOthers' concurrently
+        // The synchronized block prevents race conditions when modifying shared TeamState objects.
+        remainingOthers.parallelStream().forEach(p -> {
+            TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
+
+            if (bestTeam != null) {
+                // Synchronize access to the specific team object being modified
+                synchronized (bestTeam) {
+                    // Double-check condition inside the lock just in case another thread filled it
+                    if (bestTeam.members.size() < teamSize) {
+                        bestTeam.addMember(p);
+                    } else {
+                        // If blocked and team is full, add to remaining list (needs synchronization)
+                        remainingParticipants.add(p);
                     }
-                })
-                .thenComparingInt(Participant::getSkillLevel)
-                .reversed()
-        );
+                }
+            } else {
+                // Synchronize access to the static remainingParticipants list
+                remainingParticipants.add(p);
+            }
+        });
+
+        // --- End Multi-threaded Assignment ---
+
+        List<List<Participant>> finalTeams = new ArrayList<>();
+        // Collect results sequentially
+        for (TeamState team : teamStates) {
+            if (team.members.size() == teamSize) finalTeams.add(new ArrayList<>(team.members));
+            else remainingParticipants.addAll(team.members);
+        }
+        return finalTeams;
     }
 
-    private static void assignLeaders(List<Participant> pool, List<Team> teams, int teamSize) {
-        List<Participant> leaders = pool.stream()
-                .filter(p -> p.getPersonalityType() == PersonalityType.LEADER && (p.getTeamNumber() == null || p.getTeamNumber().isEmpty()))
-                .collect(Collectors.toList());
+    // formLeftoverTeams remains sequential for simplicity, but could also be updated
 
-        for (int i = 0; i < Math.min(leaders.size(), teams.size()); i++) {
-            Participant leader = leaders.get(i);
-            Team team = teams.get(i);
-            if (team.size() < teamSize) {
-                team.addMember(leader);
-                leader.setTeamNumber(String.valueOf(team.getTeamId()));
-            }
+    public static List<List<Participant>> formLeftoverTeams(int teamSize) {
+        List<Participant> pool = new ArrayList<>(getRemainingParticipants());
+        if (teamSize <= 0 || pool.size() < teamSize) return Collections.emptyList();
+
+        double poolAvgSkill = pool.stream()
+                .mapToInt(TeamBuilder::safeSkill)
+                .average()
+                .orElse(0);
+
+        int maxNewTeams = pool.size() / teamSize;
+        List<TeamState> newTeams = new ArrayList<>();
+        pool.sort(Comparator.comparingInt(TeamBuilder::safeSkill).reversed());
+        List<Participant> tempPool = new ArrayList<>(pool);
+        pool.clear();
+
+        for (int i = 0; i < maxNewTeams; i++) {
+            if (tempPool.isEmpty()) break;
+            TeamState state = new TeamState(newTeams.size() + 100);
+            state.addMember(tempPool.remove(0));
+            newTeams.add(state);
         }
+        pool.addAll(tempPool);
+        Collections.shuffle(pool, new Random());
+
+        List<Participant> unassigned = new ArrayList<>();
+
+        // Optional: Could use parallelStream here, but requires synchronization on newTeams elements
+        for (Participant p : pool) {
+            TeamState bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
+            if (bestTeam != null) bestTeam.addMember(p);
+            else unassigned.add(p);
+        }
+
+        List<List<Participant>> finalNewTeams = new ArrayList<>();
+        remainingParticipants.clear();
+        for (TeamState team : newTeams) {
+            if (team.members.size() == teamSize) finalNewTeams.add(new ArrayList<>(team.members));
+            else remainingParticipants.addAll(team.members);
+        }
+        remainingParticipants.addAll(unassigned);
+        return finalNewTeams;
     }
 
-    private static void assignThinkers(List<Participant> pool, List<Team> teams, int teamSize) {
-        List<Participant> thinkers = pool.stream()
-                .filter(p -> p.getPersonalityType() == PersonalityType.THINKER && (p.getTeamNumber() == null || p.getTeamNumber().isEmpty()))
-                .collect(Collectors.toList());
+    private static TeamState findBestTeamForParticipant(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {
+        if (p == null) return null;
+        String pRole = safeRole(p);
+        List<TeamState> validTeams = new ArrayList<>();
+        double minDiff = Double.MAX_VALUE;
 
-        for (Participant thinker : thinkers) {
-            Team bestTeam = findTeamForThinker(teams, thinker, teamSize);
-            if (bestTeam != null) {
-                bestTeam.addMember(thinker);
-                thinker.setTeamNumber(String.valueOf(bestTeam.getTeamId()));
+        try {
+            for (TeamState team : teamStates) {
+                // Read operations are safe without synchronization
+                if (team.members.size() >= teamSize) continue;
+                if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
+                if (pRole.equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
+
+                Map<String, Integer> roles = team.roleCounts;
+                int uniqueRoles = roles.size();
+                boolean addsNewRole = !roles.containsKey(pRole);
+                if (!addsNewRole && uniqueRoles >= MIN_UNIQUE_ROLES && (pRole.equals("leader") || pRole.equals("thinker"))) continue;
+
+                double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
+                double diff = Math.abs(newAvg - overallAvg);
+
+                // Find the team(s) with the minimum difference
+                if (diff < minDiff) {
+                    validTeams.clear();
+                    validTeams.add(team);
+                    minDiff = diff;
+                } else if (diff == minDiff) validTeams.add(team);
             }
-        }
-    }
+        } catch (Exception ignored) {}
 
-    private static Team findTeamForThinker(List<Team> teams, Participant thinker, int teamSize) {
-        Team bestTeam = null;
-        double bestScore = Double.NEGATIVE_INFINITY;
-
-        for (Team team : teams) {
-            if (team.size() >= teamSize) continue;
-
-            long currentThinkers = team.getMembers().stream()
-                    .filter(p -> p.getPersonalityType() == PersonalityType.THINKER)
-                    .count();
-
-            if (currentThinkers >= REQUIRED_THINKERS_MAX) continue;
-
-            double score = currentThinkers == 0 ? 1000 : 500; // prioritize teams without thinkers
-            if (score > bestScore) {
-                bestScore = score;
-                bestTeam = team;
-            }
-        }
-        return bestTeam;
-    }
-
-    private static void assignRemainingParticipants(List<Participant> pool, List<Team> teams, int teamSize) {
-        List<Participant> unassigned = pool.stream()
-                .filter(p -> p.getTeamNumber() == null || p.getTeamNumber().isEmpty())
-                .sorted(Comparator.comparingInt(Participant::getSkillLevel).reversed())
-                .collect(Collectors.toList());
-
-        for (Participant participant : unassigned) {
-            Team bestTeam = findBestTeamForParticipant(teams, participant, teamSize);
-            if (bestTeam != null) {
-                bestTeam.addMember(participant);
-                participant.setTeamNumber(String.valueOf(bestTeam.getTeamId()));
-            }
-        }
-
-        // Remove assigned from pool
-        pool.removeIf(p -> p.getTeamNumber() != null && !p.getTeamNumber().isEmpty());
-    }
-
-    private static Team findBestTeamForParticipant(List<Team> teams, Participant participant, int teamSize) {
-        for (Team team : teams) {
-            if (team.size() >= teamSize) continue;
-
-            if (team.countGame(participant.getPreferredGame()) >= MAX_GAME_PER_TEAM) continue;
-
-            Set<RoleType> roles = new HashSet<>();
-            team.getMembers().forEach(p -> roles.add(p.getPreferredRole()));
-            roles.add(participant.getPreferredRole());
-            if (roles.size() < minRolesRequired(teamSize)) continue;
-
-            // Personality constraints
-            if (participant.getPersonalityType() == PersonalityType.LEADER) {
-                boolean hasLeader = team.getMembers().stream()
-                        .anyMatch(p -> p.getPersonalityType() == PersonalityType.LEADER);
-                if (hasLeader) continue;
-            }
-            if (participant.getPersonalityType() == PersonalityType.THINKER) {
-                long currentThinkers = team.getMembers().stream()
-                        .filter(p -> p.getPersonalityType() == PersonalityType.THINKER)
-                        .count();
-                if (currentThinkers >= REQUIRED_THINKERS_MAX) continue;
-            }
-
-            return team;
-        }
+        if (!validTeams.isEmpty()) return validTeams.get(ThreadLocalRandom.current().nextInt(validTeams.size()));
         return null;
     }
 
-    private static int minRolesRequired(int teamSize) {
-        return teamSize > 5 ? 4 : 3;
+    private static TeamState findBestLeftoverTeam(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {
+        if (p == null) return null;
+        List<TeamState> validTeams = new ArrayList<>();
+        double minDiff = Double.MAX_VALUE;
+
+        try {
+            for (TeamState team : teamStates) {
+                if (team.members.size() >= teamSize) continue;
+                if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
+                if (safeRole(p).equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
+
+                double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
+                double diff = Math.abs(newAvg - overallAvg);
+
+                if (diff < minDiff) {
+                    validTeams.clear();
+                    validTeams.add(team);
+                    minDiff = diff;
+                } else if (diff == minDiff) validTeams.add(team);
+            }
+        } catch (Exception ignored) {}
+
+        if (!validTeams.isEmpty()) return validTeams.get(ThreadLocalRandom.current().nextInt(validTeams.size()));
+        return null;
     }
 
-    // ------------------- Remaining Participants -------------------
+    private static int countGame(List<Participant> team, String game) {
+        if (game == null) return 0;
+        int count = 0;
+        for (Participant p : team)
+            if (p.getPreferredGame() != null && p.getPreferredGame().equalsIgnoreCase(game)) count++;
+        return count;
+    }
 
     public static List<Participant> getRemainingParticipants() {
         return new ArrayList<>(remainingParticipants);
     }
 
-    public static void clearRemainingParticipants() {
-        remainingParticipants.clear();
+    private static String safeRole(Participant p) {
+        if (p == null) return "unknown";
+        String r = String.valueOf(p.getPersonalityType());
+        return (r == null) ? "unknown" : r.toLowerCase();
     }
 
-    // ------------------- Debug / Stats -------------------
-
-    public static void printFormationStats(List<List<Participant>> teams, List<Participant> allParticipants) {
-        System.out.println("\nTeam Formation Summary:");
-        for (int i = 0; i < teams.size(); i++) {
-            List<Participant> team = teams.get(i);
-            double avgSkill = team.stream().mapToInt(Participant::getSkillLevel).average().orElse(0);
-            long leaders = team.stream().filter(p -> p.getPersonalityType() == PersonalityType.LEADER).count();
-            long thinkers = team.stream().filter(p -> p.getPersonalityType() == PersonalityType.THINKER).count();
-            long balanced = team.stream().filter(p -> p.getPersonalityType() == PersonalityType.BALANCED).count();
-            long motivators = team.stream().filter(p -> p.getPersonalityType() == PersonalityType.MOTIVATOR).count();
-
-            System.out.printf("Team %d: Avg Skill %.2f, Leaders %d, Thinkers %d, Balanced %d, Motivators %d, Size %d\n",
-                    i + 1, avgSkill, leaders, thinkers, balanced, motivators, team.size());
+    private static int safeSkill(Participant p) {
+        if (p == null) return 0;
+        try {
+            return p.getSkillLevel();
+        } catch (Exception ignored) {
+            return 0;
         }
-
-        if (!remainingParticipants.isEmpty()) {
-            System.out.println("\nRemaining Participants:");
-            remainingParticipants.forEach(p -> System.out.println("  " + p));
-        }
-
     }
+
 
 
 }
+//        System.out.println("\n================== FORMATION STATISTICS ==================");
+//
+//        // Skill Balance Analysis
+//        List<Double> avgSkills = teams.stream()
+//                .map(team -> team.stream().mapToInt(Participant::getSkillLevel).average().orElse(0.0))
+//                .collect(Collectors.toList());
+//
+//        double overallAvgSkill = allParticipants.stream()
+//                .mapToInt(Participant::getSkillLevel)
+//                .average()
+//                .orElse(0.0);
+//
+//        double teamAvgOfAvgs = avgSkills.stream().mapToDouble(d -> d).average().orElse(0.0);
+//        double variance = avgSkills.stream()
+//                .mapToDouble(avg -> Math.pow(avg - teamAvgOfAvgs, 2))
+//                .average()
+//                .orElse(0.0);
+//        double stdDev = Math.sqrt(variance);
+//
+//        System.out.println(" Skill Balance:");
+//        System.out.printf("   Overall Participant Avg Skill: %.2f\n", overallAvgSkill);
+//        System.out.printf("   Average Team Skill Deviation (Std Dev): %.2f\n", stdDev);
+//
+//        for (int i = 0; i < teams.size(); i++) {
+//            System.out.printf("   Team %d Avg Skill: %.2f\n", (i + 1), avgSkills.get(i));
+//        }
+
+//// Diversity Checks
+//        System.out.println("\n Diversity Checks (Game/Role/Personality):");
+//int teamSize = teams.get(0).size();
+//int minRolesRequired = getMinRolesRequired(teamSize);
+//
+//boolean allConstraintsMet = true;
+//
+//        for (int i = 0; i < teams.size(); i++) {
+//List<Participant> team = teams.get(i);
+//
+//// Game Variety Check
+//Map<String, Long> gameCounts = team.stream()
+//        .collect(Collectors.groupingBy(Participant::getPreferredGame, Collectors.counting()));
+//long maxGameCount = gameCounts.values().stream().mapToLong(l -> l).max().orElse(0);
+//
+//// Role Diversity Check
+//long distinctRoles = team.stream().map(Participant::getPreferredRole).distinct().count();
+//
+//// Personality Mix Check
+//Map<PersonalityType, Long> personalityCounts = team.stream()
+//        .collect(Collectors.groupingBy(Participant::getPersonalityType, Collectors.counting()));
+//
+//boolean gameOK = maxGameCount <= MAX_GAME_PER_TEAM;
+//boolean rolesOK = distinctRoles >= minRolesRequired;
+//boolean leaderOK = personalityCounts.getOrDefault(PersonalityType.LEADER, 0L) == REQUIRED_LEADERS;
+//boolean thinkerOK = personalityCounts.getOrDefault(PersonalityType.THINKER, 0L) >= REQUIRED_THINKERS_MIN &&
+//        personalityCounts.getOrDefault(PersonalityType.THINKER, 0L) <= REQUIRED_THINKERS_MAX;
+//
+//        if (!(gameOK && rolesOK && leaderOK && thinkerOK)) {
+//allConstraintsMet = false;
+//        }
+//
+//        System.out.printf("   Team %d:\n", (i + 1));
+//        System.out.printf("     - Max Game Count: %d (Cap: %d) %s\n", maxGameCount, MAX_GAME_PER_TEAM, (gameOK ? "🟢" : "🔴"));
+//        System.out.printf("     - Distinct Roles: %d (Min: %d) %s\n", distinctRoles, minRolesRequired, (rolesOK ? "🟢" : "🔴"));
+//        System.out.printf("     - Personality Mix: Leader=%d (%s), Thinker=%d (%s)\n",
+//                          personalityCounts.getOrDefault(PersonalityType.LEADER, 0L),
+//                (leaderOK ? "🟢" : "🔴"),
+//        personalityCounts.getOrDefault(PersonalityType.THINKER, 0L),
+//                (thinkerOK ? "🟢" : "🔴"));
+//
+//        // Detailed personality breakdown
+////            System.out.printf("     - Personality Breakdown: %s\n", personalityCounts.entrySet().stream()
+////                    .map(e -> e.getKey() + "=" + e.getValue())
+////                    .collect(Collectors.joining(", ")));
+//        }
+//
+//        System.out.printf("\n Overall Constraints Met: %s\n", allConstraintsMet ? "🟢 SUCCESS" : "🔴 FAILED");
+//        System.out.printf(" Remaining Unassigned Participants: %d\n", remainingParticipants.size());
+//        }

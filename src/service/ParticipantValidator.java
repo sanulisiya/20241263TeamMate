@@ -1,68 +1,64 @@
 package service;
 
-import java.net.IDN;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
 public class ParticipantValidator {
 
-
-
-    //  Allowed games (canonical names)
+    // Allowed games (canonical names)
     private static final List<String> ALLOWED_GAMES = Arrays.asList(
-            "Valorant", "Dota","DOTA 2","FIFA", "Basketball", "Badminton", "Chess","CS:GO"
+            "Valorant", "Dota", "DOTA 2", "FIFA", "Basketball", "Badminton", "Chess", "CS:GO"
     );
 
-    //  Allowed personality types
+    // Allowed personality types
     private static final List<String> ALLOWED_PERSONALITIES = Arrays.asList(
             "LEADER", "THINKER", "BALANCED", "MOTIVATOR"
     );
 
-    //  Email regex
+    // Email regex
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"
     );
 
-    //  Name regex: letters and spaces, 2â€“50 chars
+    // Name regex: letters and spaces, 2-50 chars
     private static final Pattern NAME_PATTERN = Pattern.compile(
             "^[A-Za-z0-9_ ]+$"
     );
-//    private static final Pattern ID_PATTERN = Pattern.compile(
-//            "^[Pp]\\d{3}$"
-//    );
 
+    // ID pattern (P followed by 3 digits)
+    private static final Pattern ID_PATTERN = Pattern.compile(
+            "^[Pp]\\d{3}$"
+    );
 
-
-//    public static boolean validateID(String id) {
-//        return id != null && ID_PATTERN.matcher(id).matches();
-//    }
-
-    //  Validate name
-
-    public static boolean validateName(String name) {
-        return name != null && NAME_PATTERN.matcher(name).matches();
+    // Validate ID
+    public static boolean validateID(String id) {
+        return id != null && ID_PATTERN.matcher(id).matches();
     }
 
-    //  Validate email
+    // Validate name
+    public static boolean validateName(String name) {
+        return name != null && NAME_PATTERN.matcher(name).matches() && name.length() >= 2 && name.length() <= 50;
+    }
+
+    // Validate email
     public static boolean validateEmail(String email) {
         return email != null && EMAIL_PATTERN.matcher(email).matches();
     }
 
-    //  Validate skill level (1 to 10)
+    // Validate skill level (1 to 10)
     public static boolean validateSkillLevel(int skillLevel) {
-        return skillLevel >= 0 && skillLevel <= 10;
+        return skillLevel >= 1 && skillLevel <= 10;
     }
 
-
-    //  Validate game (case-insensitive)
+    // Validate game (case-insensitive)
     public static boolean validateGame(String game) {
         if (game == null) return false;
         return ALLOWED_GAMES.stream()
                 .anyMatch(g -> g.equalsIgnoreCase(game.trim()));
     }
 
-    //  Get normalized game name (for consistent storage/display)
+    // Get normalized game name (for consistent storage/display)
     public static String getNormalizedGame(String game) {
         if (game == null) return null;
         for (String g : ALLOWED_GAMES) {
@@ -72,17 +68,16 @@ public class ParticipantValidator {
         }
         return null;
     }
+
     // Validate preferred role (non-empty, matches allowed roles)
     public static boolean validateRole(String role) {
         if (role == null) return false;
-
         return role.trim().matches("(?i)^(Coordinator|Strategist|Defender|Attacker|Supporter)$");
     }
 
-
-    //validate personality type score
-    public static boolean validatePersonalityScore(int PersonalityScore) {
-        return PersonalityScore >= 0 && PersonalityScore <= 100;
+    // Validate personality type score
+    public static boolean validatePersonalityScore(int personalityScore) {
+        return personalityScore >= 0 && personalityScore <= 100;
     }
 
     // Validate personality type (case-insensitive)
@@ -92,19 +87,38 @@ public class ParticipantValidator {
                 .anyMatch(p -> p.equalsIgnoreCase(type.trim()));
     }
 
-
-
-    // Full participant validation
-    public static boolean validateParticipant(String id ,String name, String email, int skill, String game, String role, String personalityType) {
-        int validatePersonalityScore = 0;
-
-        return
+    // Full participant validation WITHOUT personality score (for creation)
+    public static boolean validateParticipant(String id, String name, String email, int skill,
+                                              String game, String role, String personalityType) {
+        return validateID(id) &&
                 validateName(name) &&
                 validateEmail(email) &&
                 validateSkillLevel(skill) &&
                 validateGame(game) &&
                 validateRole(role) &&
-                validatePersonalityScore(validatePersonalityScore)&&
                 validatePersonalityType(personalityType);
+    }
+
+    // Full participant validation WITH personality score (for updates)
+    public static boolean validateParticipantWithScore(String id, String name, String email, int skill,
+                                                       String game, String role, int personalityScore, String personalityType) {
+        return validateID(id) &&
+                validateName(name) &&
+                validateEmail(email) &&
+                validateSkillLevel(skill) &&
+                validateGame(game) &&
+                validateRole(role) &&
+                validatePersonalityScore(personalityScore) &&
+                validatePersonalityType(personalityType);
+    }
+
+    // Get allowed games list
+    public static List<String> getAllowedGames() {
+        return ALLOWED_GAMES;
+    }
+
+    // Get allowed personalities list
+    public static List<String> getAllowedPersonalities() {
+        return ALLOWED_PERSONALITIES;
     }
 }

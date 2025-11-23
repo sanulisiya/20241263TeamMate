@@ -32,7 +32,6 @@ public enum RoleType {
     }
 
     public boolean equalsIgnoreCase(RoleType role) {
-
-        return false;
+        return this == role;
     }
 }

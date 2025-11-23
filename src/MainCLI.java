@@ -4,6 +4,7 @@ import service.ParticipantCreator;
 import service.TeamBuilder;
 import service.TeamFileHandler;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,7 +55,7 @@ public class MainCLI {
                         sc.nextLine();
                     } catch (InputMismatchException e) {
                         System.out.println("Invalid input. Please enter a number.");
-                        sc.nextLine();
+                         sc.nextLine();
                         continue;
                     }
 
@@ -98,37 +99,59 @@ public class MainCLI {
                             String yn = sc.nextLine().trim().toLowerCase();
 
                             if (yn.equals("yes")) {
-                                List<List<Participant>> formattedTeams;
                                 try {
-                                    formattedTeams = Collections.singletonList(FileHandler.loadParticipantsSingleThread(OUTPUT_PATH));
-                                } catch (Exception e) {
-                                    System.out.println("Error loading teams: " + e.getMessage());
-                                    continue;
-                                }
+                                    // Load all participants from the teams file
+                                    List<Participant> allTeamMembers = FileHandler.loadParticipantsSingleThread(OUTPUT_PATH);
 
-                                if (formattedTeams == null || formattedTeams.isEmpty()) {
-                                    System.out.println("\nTeams have not been formed yet. Please check later!");
-                                } else {
-                                    boolean foundTeam = false;
+                                    // Reconstruct teams by grouping participants with the same team number
+                                    Map<String, List<Participant>> teamsMap = new HashMap<>();
 
-                                    for (int i = 0; i < formattedTeams.size(); i++) {
-                                        List<Participant> team = formattedTeams.get(i);
-                                        for (Participant teammate : team) {
-                                            if (teammate.getId().equalsIgnoreCase(found.getId())) {
-                                                System.out.println("\nYou are in TEAM " + (i + 1));
-                                                System.out.println("---- Team Members ----");
-                                                for (Participant t : team) {
-                                                    System.out.println(t);
-                                                }
-                                                foundTeam = true;
-                                                break;
-                                            }
+                                    for (Participant p : allTeamMembers) {
+                                        String teamNum = p.getTeamNumber();
+                                        if (teamNum != null && !teamNum.trim().isEmpty()) {
+                                            teamsMap.computeIfAbsent(teamNum, k -> new ArrayList<>()).add(p);
                                         }
-                                        if (foundTeam) break;
                                     }
 
-                                    if (!foundTeam) {
-                                        System.out.println("\nYou are not assigned to any team yet.");
+                                    // Convert to list of teams
+                                    List<List<Participant>> formattedTeams = new ArrayList<>(teamsMap.values());
+
+                                    if (formattedTeams.isEmpty()) {
+                                        System.out.println("\nNo teams have been formed yet. Please check later!");
+                                    } else {
+                                        boolean foundTeam = false;
+
+                                        // Find which team the participant belongs to
+                                        for (int i = 0; i < formattedTeams.size(); i++) {
+                                            List<Participant> team = formattedTeams.get(i);
+                                            for (Participant teammate : team) {
+                                                if (teammate.getId().equalsIgnoreCase(found.getId())) {
+                                                    System.out.println("\n📋 You are in TEAM " + (i + 1));
+                                                    System.out.println("---- Team Members ----");
+                                                    for (Participant t : team) {
+                                                        System.out.println("  " + t);
+                                                    }
+
+                                                    // Display team statistics
+                                                    displayTeamStats(team);
+                                                    foundTeam = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (foundTeam) break;
+                                        }
+
+                                        if (!foundTeam) {
+                                            System.out.println("\nYou are not assigned to any team yet.");
+                                        }
+                                    }
+
+                                } catch (Exception e) {
+                                    System.out.println("Error loading teams: " + e.getMessage());
+                                    // Check if file doesn't exist
+                                    File teamsFile = new File(OUTPUT_PATH);
+                                    if (!teamsFile.exists()) {
+                                        System.out.println("Teams file not found. Teams may not have been formed yet.");
                                     }
                                 }
                             }
@@ -201,11 +224,13 @@ public class MainCLI {
                                     break;
 
                                 case 2:
-                                    if (uploadedFilePath == null) {
+                                    if (uploadedFilePath == null && participants.isEmpty()) {
                                         System.out.println("No file uploaded. Please upload a CSV first.");
                                     } else {
                                         try {
-                                            participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
+                                            if (uploadedFilePath != null) {
+                                                participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
+                                            }
                                             System.out.println("\n--- PARTICIPANT LIST ---");
                                             for (Participant p : participants) {
                                                 System.out.println(p);
@@ -252,7 +277,7 @@ public class MainCLI {
                                         remainingPool = TeamBuilder.getRemainingParticipants();
 
                                         // Display formed teams
-                                        if (!teams.isEmpty()) {
+                                        if (teams != null && !teams.isEmpty()) {
                                             System.out.println("\nTEAMS FORMED SUCCESSFULLY");
                                             int teamId = 1;
                                             for (List<Participant> team : teams) {
@@ -266,7 +291,7 @@ public class MainCLI {
                                         }
 
                                         // Show remaining
-                                        if (!remainingPool.isEmpty()) {
+                                        if (remainingPool != null && !remainingPool.isEmpty()) {
                                             System.out.println("\nREMAINING PARTICIPANTS (could not fit into full teams):");
                                             remainingPool.forEach(p -> System.out.println("  " + p.getName() + " (Skill: " + p.getSkillLevel() + ")"));
                                         }
@@ -313,6 +338,7 @@ public class MainCLI {
 
                         } catch (Exception e) {
                             System.out.println("An error occurred in organizer panel: " + e.getMessage());
+                            e.printStackTrace();
                         }
                     }
                 }
@@ -327,9 +353,44 @@ public class MainCLI {
 
             } catch (Exception e) {
                 System.out.println("An unexpected error occurred: " + e.getMessage());
+                e.printStackTrace();
             }
         }
 
         sc.close();
+    }
+
+    // Helper method to display team statistics
+    private static void displayTeamStats(List<Participant> team) {
+        if (team == null || team.isEmpty()) return;
+
+        // Calculate team statistics
+        double avgSkill = team.stream()
+                .mapToInt(Participant::getSkillLevel)
+                .average()
+                .orElse(0.0);
+
+        Map<String, Long> gameCount = team.stream()
+                .collect(Collectors.groupingBy(Participant::getPreferredGame, Collectors.counting()));
+
+        Map<String, Long> roleCount = team.stream()
+                .collect(Collectors.groupingBy(p -> p.getPreferredRole().name(), Collectors.counting()));
+
+        Map<String, Long> personalityCount = team.stream()
+                .collect(Collectors.groupingBy(p -> p.getPersonalityType().name(), Collectors.counting()));
+
+        System.out.println("\n📊 Team Statistics:");
+        System.out.printf("   Average Skill Level: %.2f/10\n", avgSkill);
+        System.out.println("   Game Distribution: " + formatMap(gameCount));
+        System.out.println("   Role Distribution: " + formatMap(roleCount));
+        System.out.println("   Personality Distribution: " + formatMap(personalityCount));
+        System.out.println("   Team Size: " + team.size());
+    }
+
+    // Helper method to format map for display
+    private static String formatMap(Map<String, Long> map) {
+        return map.entrySet().stream()
+                .map(entry -> entry.getKey() + "(" + entry.getValue() + ")")
+                .collect(Collectors.joining(", "));
     }
 }

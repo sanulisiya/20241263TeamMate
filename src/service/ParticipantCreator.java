@@ -76,9 +76,9 @@ public class ParticipantCreator {
                     preferredGame, preferredRole.name(), personalityType.name()
             )) {
                 System.out.println("Error: participant data invalid.");
+                System.out.println("Please check: ID format (P001), name (2-50 chars), email, skill (1-10), game, role, and personality type.");
                 return;
             }
-
             // ---------------- Create Object ----------------
             Participant p = new Participant(
                     id, name, email, preferredGame,

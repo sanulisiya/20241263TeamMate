@@ -337,16 +337,35 @@ public class MainCLI {
                                     if (teams == null || teams.isEmpty()) {
                                         System.out.println("Teams not formed yet. Please form teams first (Option 3).");
                                     } else {
+                                        Scanner saveScanner = new Scanner(System.in);
+
+                                        System.out.println("\nEnter the FULL file path where you want to save the team CSV:");
+                                        System.out.println("(Example: C:\\Users\\DELL\\Desktop\\final_teams.csv)");
+                                        System.out.print("Path: ");
+                                        String userPath = saveScanner.nextLine().trim();
+
+                                        if (userPath.isEmpty()) {
+                                            System.out.println("Invalid path. Saving cancelled.");
+                                            break;
+                                        }
+
+                                        // Ensure file ends with .csv
+                                        if (!userPath.toLowerCase().endsWith(".csv")) {
+                                            userPath = userPath + ".csv";
+                                        }
+
                                         try {
-                                            TeamFileHandler.saveTeamsToCSV(teams, OUTPUT_PATH);
-                                            System.out.println("\nTeams successfully saved to: " + OUTPUT_PATH);
-                                            System.out.println("Total teams saved: " + teams.size());
+                                            TeamFileHandler.saveTeamsToCSV(teams, userPath);
+                                            System.out.println("\n✔ Teams successfully saved!");
+                                            System.out.println("Saved to: " + userPath);
+                                            System.out.println("Total formatted teams saved: " + teams.size());
                                             System.out.println("Participants can now view their assigned teams in the participant menu.");
                                         } catch (Exception e) {
                                             System.out.println(" Error saving teams: " + e.getMessage());
                                         }
                                     }
                                     break;
+
 
                                 case 5:
                                     try {

@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 public class MainCLI {
 
     private static final String FILE_PATH = "C:\\Users\\DELL\\Desktop\\participants_sample.csv";
-    private static final String OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv";
+    private static String TEAMS_OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv"; // Made non-final and updated based on user input
 
     // Organizer login PIN
     private static final String ORGANIZER_PIN = "1234";
@@ -98,8 +98,8 @@ public class MainCLI {
 
                             if (yn.equals("yes") || yn.equals("y")) {
                                 try {
-                                    // Check if team file exists
-                                    File teamFile = new File(OUTPUT_PATH);
+                                    // Check if team file exists using the updated TEAMS_OUTPUT_PATH
+                                    File teamFile = new File(TEAMS_OUTPUT_PATH);
                                     if (!teamFile.exists()) {
                                         System.out.println("\nNo teams have been formed yet. Please check later!");
                                         System.out.println("\nReturning to main menu...\n");
@@ -107,7 +107,7 @@ public class MainCLI {
                                     }
 
                                     // Load participants from team file using the correct method
-                                    List<Participant> teamParticipants = FileHandler.loadTeamsFromOutput(OUTPUT_PATH);
+                                    List<Participant> teamParticipants = FileHandler.loadTeamsFromOutput(TEAMS_OUTPUT_PATH);
 
                                     if (teamParticipants.isEmpty()) {
                                         System.out.println("\nNo teams found in the team file.");
@@ -356,8 +356,10 @@ public class MainCLI {
 
                                         try {
                                             TeamFileHandler.saveTeamsToCSV(teams, userPath);
+                                            // Update the TEAMS_OUTPUT_PATH with the user-provided path
+                                            TEAMS_OUTPUT_PATH = userPath;
                                             System.out.println("\n✔ Teams successfully saved!");
-                                            System.out.println("Saved to: " + userPath);
+                                            System.out.println("Saved to: " + TEAMS_OUTPUT_PATH);
                                             System.out.println("Total formatted teams saved: " + teams.size());
                                             System.out.println("Participants can now view their assigned teams in the participant menu.");
                                         } catch (Exception e) {
@@ -369,11 +371,12 @@ public class MainCLI {
 
                                 case 5:
                                     try {
-                                        File teamFile = new File(OUTPUT_PATH);
+                                        // Use the updated TEAMS_OUTPUT_PATH variable instead of hardcoded OUTPUT_PATH
+                                        File teamFile = new File(TEAMS_OUTPUT_PATH);
                                         if (!teamFile.exists()) {
                                             System.out.println("No team assignments found. Please form and save teams first.");
                                         } else {
-                                            List<Participant> teamAssignments = FileHandler.loadTeamsFromOutput(OUTPUT_PATH);
+                                            List<Participant> teamAssignments = FileHandler.loadTeamsFromOutput(TEAMS_OUTPUT_PATH);
                                             if (teamAssignments.isEmpty()) {
                                                 System.out.println("No team assignments found in the file.");
                                             } else {

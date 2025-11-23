@@ -57,7 +57,7 @@ public class TeamFileHandler {
                         .append(",Motivator: ").append(balancedCount)
                         .append("\n");
 
-                sb.append("---------------------------------------------------------------\n");
+                sb.append("----------------------------------------------------------------\n");
             }
 
             writer.write(sb.toString());

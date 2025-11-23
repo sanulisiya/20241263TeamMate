@@ -1,6 +1,10 @@
 package service;
 
 import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class Survey {
 
@@ -19,33 +23,41 @@ public class Survey {
                 "5. I like making quick decisions and adapting in dynamic situations."
         };
 
-        for (String q : questions) {
-            int answer = -1;
-            boolean valid = false;
+        // Start progress indicator in background
+        SurveyThreadManager.startProgressIndicator(questions.length);
 
-            while (!valid) {
-                System.out.print(q + " →  Your answer (1-5): ");
-                String input = sc.nextLine().trim();
+        for (int i = 0; i < questions.length; i++) {
+            String question = questions[i];
 
-                try {
-                    answer = Integer.parseInt(input);
+            // Get answer with timeout capability
+            Integer answer = SurveyThreadManager.getAnswerWithTimeout(question, 30, i + 1);
 
-                    if (answer >= 1 && answer <= 5) {
-                        valid = true;
-                    } else {
-                        System.out.println(" Please enter a number between 1 and 5 only.");
-                    }
-
-                } catch (NumberFormatException e) {
-                    System.out.println(" Invalid input. Please enter a numeric value between 1 and 5.");
-                }
+            if (answer == null) {
+                System.out.println("No valid answer provided, using default value 3");
+                answer = 3;
             }
 
             total += answer;
+
+            // Save result asynchronously after each question
+            SurveyThreadManager.saveQuestionResultAsync(i + 1, question, answer);
         }
 
-        int scaledScore = total * 4;  // Scale total to 100
+        // Stop progress indicator
+        SurveyThreadManager.stopProgressIndicator();
+
+        int scaledScore = total * 4;
         String type = classifyPersonality(scaledScore);
+
+        // Get classification asynchronously
+        CompletableFuture<String> asyncType = SurveyThreadManager.classifyPersonalityAsync(scaledScore);
+
+        try {
+            type = asyncType.get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            System.out.println("Classification timed out, using synchronous method");
+            type = classifyPersonality(scaledScore);
+        }
 
         System.out.println("\n===== Personality Summary =====");
         System.out.println("Raw Score: " + total + " (out of 25)");
@@ -53,13 +65,23 @@ public class Survey {
         System.out.println("Personality Type: " + type);
         System.out.println("Description: " + getTypeDescription(type));
 
+        // Save final result asynchronously
+        SurveyThreadManager.saveSurveyResultAsync(total, scaledScore, type);
+
         return scaledScore;
     }
 
     public static String classifyPersonality(int score) {
+        // Simulate some processing time
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         if (score >= 90) return "Leader";
         else if (score >= 70) return "Balanced";
-        else if (score>=50) return "Thinker";
+        else if (score >= 50) return "Thinker";
         else return "Motivator";
     }
 
@@ -68,8 +90,16 @@ public class Survey {
             case "Leader" -> "Confident, decision-maker, naturally takes charge.";
             case "Balanced" -> "Adaptive, communicative, and team-oriented.";
             case "Thinker" -> "Observant, analytical, and prefers planning before action.";
-            case "Motivator" -> "boosting morale and encouraging collaboration to achieve goals.";
+            case "Motivator" -> "Boosting morale and encouraging collaboration to achieve goals.";
             default -> "Unknown type.";
         };
+    }
+
+    // Method for batch processing multiple surveys
+    public static CompletableFuture<Integer> conductSurveyAsync() {
+        return CompletableFuture.supplyAsync(() -> {
+            System.out.println("\n--- Starting async survey ---");
+            return conductPersonalitySurvey();
+        });
     }
 }

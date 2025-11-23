@@ -29,18 +29,20 @@ public class TeamBuilder {
     // Public API (Main Orchestration)
     // --------------------------------------------------------------------------
 
-    public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
-        if (participants == null || participants.isEmpty() || teamSize <= 1) {
+    public static List<List<Participant>> formTeams(List<Participant> originalList, int teamSize) {
+        remainingParticipants.clear();
+
+        if (originalList == null || originalList.isEmpty() || teamSize <= 1) {
             return Collections.emptyList();
         }
 
-        int numTeams = participants.size() / teamSize;
+        int numTeams = originalList.size() / teamSize;
         if (numTeams == 0) {
-            remainingParticipants = new ArrayList<>(participants);
+            remainingParticipants = new ArrayList<>(originalList);
             return Collections.emptyList();
         }
 
-        List<Participant> pool = new ArrayList<>(participants);
+        List<Participant> pool = new ArrayList<>(originalList);
         List<Team> teams = initializeTeams(numTeams);
 
         // 1. Sort the pool by priority (Leaders > Thinkers > High Skill)
@@ -200,7 +202,7 @@ public class TeamBuilder {
             }
         }
 
-        // Update the main pool - CORRECTED LINE
+        // Update the main pool with any truly unassigned
         pool.removeIf(p -> p.getTeamNumber() != null && !p.getTeamNumber().isEmpty());
         pool.addAll(unassigned);
     }
@@ -388,35 +390,35 @@ public class TeamBuilder {
             return;
         }
 
-        System.out.println("\n================== FORMATION STATISTICS ==================");
-
-        // Skill Balance Analysis
-        List<Double> avgSkills = teams.stream()
-                .map(team -> team.stream().mapToInt(Participant::getSkillLevel).average().orElse(0.0))
-                .collect(Collectors.toList());
-
-        double overallAvgSkill = allParticipants.stream()
-                .mapToInt(Participant::getSkillLevel)
-                .average()
-                .orElse(0.0);
-
-        double teamAvgOfAvgs = avgSkills.stream().mapToDouble(d -> d).average().orElse(0.0);
-        double variance = avgSkills.stream()
-                .mapToDouble(avg -> Math.pow(avg - teamAvgOfAvgs, 2))
-                .average()
-                .orElse(0.0);
-        double stdDev = Math.sqrt(variance);
-
-        System.out.println("✅ Skill Balance:");
-        System.out.printf("   Overall Participant Avg Skill: %.2f\n", overallAvgSkill);
-        System.out.printf("   Average Team Skill Deviation (Std Dev): %.2f\n", stdDev);
-
-        for (int i = 0; i < teams.size(); i++) {
-            System.out.printf("   Team %d Avg Skill: %.2f\n", (i + 1), avgSkills.get(i));
-        }
+//        System.out.println("\n================== FORMATION STATISTICS ==================");
+//
+//        // Skill Balance Analysis
+//        List<Double> avgSkills = teams.stream()
+//                .map(team -> team.stream().mapToInt(Participant::getSkillLevel).average().orElse(0.0))
+//                .collect(Collectors.toList());
+//
+//        double overallAvgSkill = allParticipants.stream()
+//                .mapToInt(Participant::getSkillLevel)
+//                .average()
+//                .orElse(0.0);
+//
+//        double teamAvgOfAvgs = avgSkills.stream().mapToDouble(d -> d).average().orElse(0.0);
+//        double variance = avgSkills.stream()
+//                .mapToDouble(avg -> Math.pow(avg - teamAvgOfAvgs, 2))
+//                .average()
+//                .orElse(0.0);
+//        double stdDev = Math.sqrt(variance);
+//
+//        System.out.println(" Skill Balance:");
+//        System.out.printf("   Overall Participant Avg Skill: %.2f\n", overallAvgSkill);
+//        System.out.printf("   Average Team Skill Deviation (Std Dev): %.2f\n", stdDev);
+//
+//        for (int i = 0; i < teams.size(); i++) {
+//            System.out.printf("   Team %d Avg Skill: %.2f\n", (i + 1), avgSkills.get(i));
+//        }
 
         // Diversity Checks
-        System.out.println("\n✅ Diversity Checks (Game/Role/Personality):");
+        System.out.println("\n Diversity Checks (Game/Role/Personality):");
         int teamSize = teams.get(0).size();
         int minRolesRequired = getMinRolesRequired(teamSize);
 
@@ -457,12 +459,12 @@ public class TeamBuilder {
                     (thinkerOK ? "🟢" : "🔴"));
 
             // Detailed personality breakdown
-            System.out.printf("     - Personality Breakdown: %s\n", personalityCounts.entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .collect(Collectors.joining(", ")));
+//            System.out.printf("     - Personality Breakdown: %s\n", personalityCounts.entrySet().stream()
+//                    .map(e -> e.getKey() + "=" + e.getValue())
+//                    .collect(Collectors.joining(", ")));
         }
 
-        System.out.printf("\n🎯 Overall Constraints Met: %s\n", allConstraintsMet ? "🟢 SUCCESS" : "🔴 FAILED");
-        System.out.printf("📊 Remaining Unassigned Participants: %d\n", remainingParticipants.size());
+        System.out.printf("\n Overall Constraints Met: %s\n", allConstraintsMet ? "🟢 SUCCESS" : "🔴 FAILED");
+        System.out.printf(" Remaining Unassigned Participants: %d\n", remainingParticipants.size());
     }
 }

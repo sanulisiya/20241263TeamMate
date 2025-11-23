@@ -216,65 +216,84 @@ public class MainCLI {
                                     break;
 
                                 case 3:
-
-                                      // Team Formation
                                     if (participants.isEmpty()) {
                                         System.out.println("Cannot form teams. Please load participants (Option 1) first.");
                                         break;
                                     }
 
-                                    // Prompt for team size N
-                                    System.out.print("Enter the desired team size (N): ");
-                                    int teamSize = 0;
-                                    try {
-                                        // Must handle the nextInt() call safely
-                                        if (sc.hasNextInt()) {
-                                            teamSize = sc.nextInt();
-                                            sc.nextLine(); // Consume newline
-                                        } else {
-                                            System.out.println("Invalid input. Please enter a number for team size.");
-                                            sc.nextLine(); // Clear the bad input
-                                            break;
+                                    boolean keepForming = true;
+                                    while (keepForming) {
+                                        int teamSize = 0;
+                                        boolean validSize = false;
+
+                                        while (!validSize) {
+                                            System.out.print("Enter the desired team size (N): ");
+                                            String input = sc.nextLine().trim();
+                                            if (input.isEmpty()) {
+                                                System.out.println("Please enter a number.");
+                                                continue;
+                                            }
+                                            try {
+                                                teamSize = Integer.parseInt(input);
+                                                if (teamSize <= 1 || teamSize > participants.size()) {
+                                                    System.out.println("Invalid team size. Must be > 1 and <= total participants (" + participants.size() + ").");
+                                                    continue;
+                                                }
+                                                validSize = true;
+                                            } catch (NumberFormatException e) {
+                                                System.out.println("Invalid input. Please enter a valid number.");
+                                            }
                                         }
 
-                                        if (teamSize <= 1 || teamSize > participants.size()) {
-                                            System.out.println("Invalid team size. Must be > 1 and <= total participants (" + participants.size() + ").");
-                                            break;
-                                        }
+                                        // CRITICAL FIX: Work on a fresh copy every time!
+                                        List<Participant> copyForFormation = new ArrayList<>(participants);
 
-                                        // --- CORE CALL TO THE NEW TEAMBUILDER ---
-                                        System.out.println("\n--- Starting Team Formation Algorithm... ---");
-                                        teams = TeamBuilder.formTeams(participants, teamSize);
+                                        System.out.println("\n----------------- Starting Team Formation Algorithm... -----------");
+                                        teams = TeamBuilder.formTeams(copyForFormation, teamSize);
 
-                                        // --- Display Results and Statistics ---
+                                        // Display teams...
                                         if (!teams.isEmpty()) {
                                             System.out.println("\n================== TEAMS FORMED SUCCESSFULLY ==================");
                                             int teamId = 1;
                                             for (List<Participant> team : teams) {
                                                 System.out.printf("\n*** TEAM %d (Size: %d) ***\n", teamId++, team.size());
+                                                System.out.println("-----------------------------------------------------------------------------------------");
                                                 team.forEach(p -> System.out.println("  " + p.toString()));
                                             }
-
-                                            // Call the statistics helper method from the new TeamBuilder
                                             TeamBuilder.printFormationStats(teams, participants);
                                         } else {
-                                            System.out.println("\nCould not form any complete teams with the given size. Check participant count.");
+                                            System.out.println("\nCould not form any complete teams with the given size.");
                                         }
 
-                                        // --- Display Remaining Participants ---
+                                        // Show remaining (from the copy — safe)
                                         remainingPool = TeamBuilder.getRemainingParticipants();
                                         if (!remainingPool.isEmpty()) {
                                             System.out.println("\n================== REMAINING POOL ==================");
                                             System.out.println("These participants could not be placed in a full team:");
                                             remainingPool.forEach(p -> System.out.println("  " + p.getName() + " (Skill: " + p.getSkillLevel() + ")"));
-                                            TeamBuilder.clearRemainingParticipants(); // Clear for next run
+                                            TeamBuilder.clearRemainingParticipants();
                                         }
 
-                                    } catch (InputMismatchException e) {
-                                        System.out.println("Invalid input. Please ensure you enter a number for team size.");
-                                        sc.nextLine(); // Clear the buffer
-                                    } catch (Exception e) {
-                                        System.out.println("An unexpected error occurred during team formation: " + e.getMessage());
+                                        // Ask to keep or re-form
+                                        if (!teams.isEmpty()) {
+                                            while (true) {
+                                                System.out.print("\nDo you want to KEEP these teams or RE-FORM them? (yes/no): ");
+                                                String decision = sc.nextLine().trim().toLowerCase();
+
+                                                if (decision.equals("no") || decision.equals("n")) {
+                                                    System.out.println("Teams finalized and kept!");
+                                                    keepForming = false;
+                                                    break;
+                                                } else if (decision.equals("yes") || decision.equals("y")) {
+                                                    System.out.println("Re-forming teams with a fresh arrangement...\n");
+                                                    break; // loop again with full original participants
+                                                } else {
+                                                    System.out.println("Please type 'yes' or 'no'.");
+                                                }
+                                            }
+                                        } else {
+                                            keepForming = false;
+                                        }
                                     }
                                     break;
 

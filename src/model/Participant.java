@@ -195,9 +195,9 @@ public class Participant {
         if (availability != null && !availability.isEmpty()) {
             sb.append(" | Availability: ").append(availability);
         }
-        if (teamNumber != null && !teamNumber.isEmpty()) {
-            sb.append(" | Team: ").append(teamNumber);
-        }
+//        if (teamNumber != null && !teamNumber.isEmpty()) {
+//            sb.append(" | Team: ").append(teamNumber);
+//        }
 
         return sb.toString();
     }

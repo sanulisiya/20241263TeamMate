@@ -49,6 +49,9 @@ public class Participant {
         this.availability = (availability != null) ? availability.trim() : null;
     }
 
+    public Participant(String id, String trim, String trim1, String trim2, int skillLevel, RoleType preferredRole, String teamNumber, PersonalityType personalityType) {
+    }
+
     // ---------------- Getters ----------------
     public String getId() {
         return id;

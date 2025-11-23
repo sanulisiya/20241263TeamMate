@@ -28,15 +28,15 @@ public class ParticipantValidator {
     private static final Pattern NAME_PATTERN = Pattern.compile(
             "^[A-Za-z0-9_ ]+$"
     );
-    private static final Pattern ID_PATTERN = Pattern.compile(
-            "^[Pp]\\d{3}$"
-    );
+//    private static final Pattern ID_PATTERN = Pattern.compile(
+//            "^[Pp]\\d{3}$"
+//    );
 
 
 
-    public static boolean validateID(String id) {
-        return id != null && ID_PATTERN.matcher(id).matches();
-    }
+//    public static boolean validateID(String id) {
+//        return id != null && ID_PATTERN.matcher(id).matches();
+//    }
 
     //  Validate name
 
@@ -99,7 +99,6 @@ public class ParticipantValidator {
         int validatePersonalityScore = 0;
 
         return
-                validateID(id)&&
                 validateName(name) &&
                 validateEmail(email) &&
                 validateSkillLevel(skill) &&

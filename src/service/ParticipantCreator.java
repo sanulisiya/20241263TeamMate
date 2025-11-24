@@ -6,6 +6,7 @@ import model.PersonalityType;
 
 import java.util.*;
 import java.io.*;
+import java.util.UUID;
 
 public class ParticipantCreator {
 
@@ -17,17 +18,14 @@ public class ParticipantCreator {
             RoleType.COORDINATOR
     };
 
-    public static void createNewParticipant(String filePath) {
+    public static void createNewParticipant(String newCSVPath) {
+        FileHandler.ensureCSVExists( newCSVPath);
+
 
         Scanner sc = new Scanner(System.in);
 
         try {
-            // ---------------- AUTO-GENERATED ID ----------------
-            int nextId = getNextId(filePath);
-            String id = "P" + nextId;
-
             System.out.println("\n=== Add New Participant ===");
-            System.out.println("Assigned Participant ID: " + id);
 
             // ---------------- Name Input ----------------
             String name;
@@ -64,6 +62,10 @@ public class ParticipantCreator {
             // ---------------- Skill Level ----------------
             int skillLevel = getValidatedInt(sc, "Enter Skill Level (1–10): ", 1, 10);
 
+            // ---------------- AUTO-GENERATED UNIQUE ID (METHOD 2) ----------------
+            String id = generateUniqueId(name, email, preferredRole.name());
+            System.out.println("Assigned Participant ID: " + id);
+
             // ---------------- Personality Survey ----------------
             System.out.println("\nNow, let's complete the 5-question Personality Survey:");
             int personalityScore = Survey.conductPersonalitySurvey();
@@ -76,9 +78,9 @@ public class ParticipantCreator {
                     preferredGame, preferredRole.name(), personalityType.name()
             )) {
                 System.out.println("Error: participant data invalid.");
-                System.out.println("Please check: ID format (P001), name (2-50 chars), email, skill (1-10), game, role, and personality type.");
                 return;
             }
+
             // ---------------- Create Object ----------------
             Participant p = new Participant(
                     id, name, email, preferredGame,
@@ -86,7 +88,7 @@ public class ParticipantCreator {
             );
 
             // ---------------- Save to CSV ----------------
-            FileHandler.saveParticipant(filePath, p);
+            FileHandler.saveParticipant(newCSVPath, p);
 
             System.out.println("\nParticipant added successfully!");
             System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")");
@@ -99,28 +101,17 @@ public class ParticipantCreator {
         }
     }
 
-    // ---------------- Helpers ----------------
+    // ===============================================================
+    // UNIQUE ID GENERATOR (Method 2: UUID + name + email + role)
+    // ===============================================================
+    private static String generateUniqueId(String name, String email, String role) {
+        String raw = name + "-" + email + "-" + role + "-" + UUID.randomUUID();
 
-    private static int getNextId(String filePath) {
-        int maxId = 0;
-
-        try (Scanner fileScanner = new Scanner(new File(filePath))) {
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine().trim();
-                if (line.isEmpty()) continue;
-
-                String[] parts = line.split(",");
-                String idStr = parts[0].replaceAll("[^0-9]", "");
-
-                if (!idStr.isEmpty()) {
-                    int num = Integer.parseInt(idStr);
-                    maxId = Math.max(maxId, num);
-                }
-            }
-        } catch (Exception ignored) {}
-
-        return maxId + 1;
+        // Remove symbols, keep letters & digits, limit to 16 chars
+        return raw.replaceAll("[^A-Za-z0-9]", "").substring(0, 16);
     }
+
+    // ---------------- Helpers ----------------
 
     private static String getNonEmptyInput(Scanner sc, String prompt) {
         while (true) {

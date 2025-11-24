@@ -32,9 +32,10 @@ public class ParticipantValidator {
     );
 
     // Validate ID
-    public static boolean validateID(String id) {
-        return id != null && ID_PATTERN.matcher(id).matches();
+    public static boolean validateId(String id) {
+        return id.matches("[A-Za-z0-9]{8,20}");
     }
+
 
     // Validate name
     public static boolean validateName(String name) {
@@ -90,7 +91,7 @@ public class ParticipantValidator {
     // Full participant validation WITHOUT personality score (for creation)
     public static boolean validateParticipant(String id, String name, String email, int skill,
                                               String game, String role, String personalityType) {
-        return validateID(id) &&
+        return validateId(id) &&
                 validateName(name) &&
                 validateEmail(email) &&
                 validateSkillLevel(skill) &&
@@ -102,7 +103,7 @@ public class ParticipantValidator {
     // Full participant validation WITH personality score (for updates)
     public static boolean validateParticipantWithScore(String id, String name, String email, int skill,
                                                        String game, String role, int personalityScore, String personalityType) {
-        return validateID(id) &&
+        return validateId(id) &&
                 validateName(name) &&
                 validateEmail(email) &&
                 validateSkillLevel(skill) &&

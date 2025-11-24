@@ -4,11 +4,19 @@ import model.Participant;
 import model.RoleType;
 import model.PersonalityType;
 
+import javax.swing.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileHandler {
+
 
     // ---------------- NORMAL SINGLE-THREADED LOADER ----------------
 
@@ -122,31 +130,73 @@ public class FileHandler {
         return null;
     }
 
+
+
+    public static String createNewCSV() {
+        // Get Desktop path dynamically
+        String desktopPath = System.getProperty("user.home") + "/Desktop";
+
+
+        // Generate filename with timestamp
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+        String timestamp = dtf.format(LocalDateTime.now());
+        String fileName = "participants_" + timestamp + ".csv";
+
+        try (FileWriter writer = new FileWriter(fileName)) {
+            // Write CSV header
+            writer.append("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType,PersonalityScore\n");
+            System.out.println("CSV file created successfully: " + fileName);
+        } catch (IOException e) {
+            System.out.println("Error creating CSV file: " + e.getMessage());
+            return null;
+        }
+
+        return fileName; // Return the path of the newly created CSV
+    }
+
+    public static void main(String[] args) {
+        // Create CSV file
+        String newCSV = createNewCSV();
+
+        // You can now pass this file path to your FileHandler to save participants
+        System.out.println("You can now save participants to: " + newCSV);
+    }
+
+
+
     // ---------------- SAVE PARTICIPANT ----------------
 
-    public static void saveParticipant(String filePath, Participant participant) {
-        // Check if file exists and write header if it doesn't
-        boolean fileExists = new File(filePath).exists();
+    public static void saveParticipant(String filePath, Participant p) {
+        FileWriter writer = null;
+        try {
+            writer = new FileWriter(filePath, true); // true for append mode
 
-        try (FileWriter writer = new FileWriter(filePath, true)) {
-            // Write header if file is new
-            if (!fileExists) {
-                writer.write("ID,Name,Email,Preferred Game,Skill Level,Preferred Role,Personality Score,Personality Type\n");
-            }
-
-            writer.write(
-                    participant.getId() + "," +
-                            participant.getName() + "," +
-                            participant.getEmail() + "," +
-                            participant.getPreferredGame() + "," +
-                            participant.getSkillLevel() + "," +
-                            participant.getPreferredRole().name() + "," +
-                            participant.getPersonalityScore() + "," +
-                            participant.getPersonalityType().name() + "\n"
+            String line = String.join(",",
+                    p.getId(),
+                    p.getName(),
+                    p.getEmail(),
+                    p.getPreferredGame(),
+                    String.valueOf(p.getSkillLevel()),
+                    p.getPreferredRole().name(),
+                    String.valueOf(p.getPersonalityScore()),
+                    p.getPersonalityType().name(),
+                    p.getTeamNumber() != null ? p.getTeamNumber() : ""
             );
+            writer.write(line + "\n");
+            System.out.println("Participant saved to: " + filePath);
 
         } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
+            System.out.println("Error saving participant: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            // Ensure writer is always closed
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    System.out.println("Error closing file: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -207,5 +257,60 @@ public class FileHandler {
         }
 
         return null;
+
     }
+    public static void ensureCSVExists(String filePath) {
+        File file = new File(filePath);
+
+        try {
+            // Create parent folder if missing
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            // Create CSV file if it doesn't exist
+            if (!file.exists()) {
+                FileWriter writer = new FileWriter(file);
+                writer.write("ID,Name,Email,Game,Skill,Role,PersonalityScore,PersonalityType\n");
+                writer.close();
+                System.out.println("CSV created at: " + file.getAbsolutePath());
+            }
+
+        } catch (Exception e) {
+            System.out.println("Could not create CSV file: " + e.getMessage());
+        }
+    }
+
+    public static String chooseLocationAndCreateCSV() {
+        try {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Select folder to save participant_data.csv");
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            chooser.setAcceptAllFileFilterUsed(false);
+
+            int result = chooser.showSaveDialog(null);
+
+            if (result == JFileChooser.APPROVE_OPTION) {
+
+                File folder = chooser.getSelectedFile();
+                String filePath = folder.getAbsolutePath() + File.separator + "participant_data.csv";
+
+                FileWriter writer = new FileWriter(filePath);
+                writer.write("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType\n");
+                writer.close();
+
+                return filePath;  // return path of new CSV file
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+
+
+
 }

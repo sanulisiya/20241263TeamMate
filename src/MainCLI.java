@@ -5,6 +5,7 @@ import service.TeamBuilder;
 import service.TeamFileHandler;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,15 +63,53 @@ public class MainCLI {
                     // ---- ADD NEW PARTICIPANT ----
                     if (participantChoice == 1) {
                         try {
-                            ParticipantCreator.createNewParticipant(FILE_PATH);
+                            System.out.println("\nEnter the folder path where you want to save participant_data.csv");
+                            System.out.println("Example: C:\\Users\\DELL\\Desktop");
+                            System.out.print("Path: ");
+
+                            String folderPath = sc.nextLine().trim();
+
+                            if (folderPath.isEmpty()) {
+                                System.out.println("Invalid folder. Returning to menu...\n");
+                                continue;
+                            }
+
+                            // Ensure folder exists
+                            File folder = new File(folderPath);
+                            if (!folder.exists() || !folder.isDirectory()) {
+                                System.out.println("Folder not found. Returning to menu...\n");
+                                continue;
+                            }
+
+                            // Create new CSV inside that folder
+                            String newCSVPath = folderPath + File.separator + "participant_data.csv";
+
+                            File csvFile = new File(newCSVPath);
+                            if (!csvFile.exists()) {
+                                FileWriter writer = new FileWriter(csvFile);
+                                writer.write("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityScore,PersonalityType,TeamNumber\n");
+                                writer.close();
+                                System.out.println("\nCreated new CSV file: " + newCSVPath);
+                            } else {
+                                System.out.println("\nCSV file already exists. Adding participant to it.");
+                            }
+
+                            // Add the participant
+                            ParticipantCreator.createNewParticipant(newCSVPath);
+
                             System.out.println("\nParticipant added successfully!");
+                            System.out.println("Saved to: " + newCSVPath);
+
                         } catch (Exception e) {
                             System.out.println("Failed to add participant: " + e.getMessage());
                             e.printStackTrace();
                         }
+
                         System.out.println("Returning to main menu...\n");
                         continue;
                     }
+
+
 
                     // ---- EXISTING PARTICIPANT LOGIN ----
                     else if (participantChoice == 2) {

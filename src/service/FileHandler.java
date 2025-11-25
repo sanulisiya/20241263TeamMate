@@ -1,27 +1,24 @@
 package service;
 
 import model.Participant;
-import model.RoleType;
 import model.PersonalityType;
+import model.RoleType;
+import utility.LoggerService;
 
 import javax.swing.*;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
-
-import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileHandler {
 
-
     // ---------------- NORMAL SINGLE-THREADED LOADER ----------------
 
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
         List<Participant> participants = new ArrayList<>();
+        LoggerService.logFileOperation("LOAD", filePath, "Loaded " + participants.size() + " participants");
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -30,9 +27,7 @@ public class FileHandler {
             if (br.ready()) {
                 String firstLine = br.readLine();
                 // Only skip if it's actually a header (contains typical header keywords)
-                if (firstLine != null && (firstLine.toLowerCase().contains("id") ||
-                        firstLine.toLowerCase().contains("name") ||
-                        firstLine.toLowerCase().contains("email"))) {
+                if (firstLine != null && (firstLine.toLowerCase().contains("id") || firstLine.toLowerCase().contains("name") || firstLine.toLowerCase().contains("email"))) {
                     // This is a header, we've already read it, so continue
                 } else {
                     // This might be data, so parse it
@@ -59,8 +54,7 @@ public class FileHandler {
         String trimmedLine = line.trim();
 
         // Ignore empty lines, separator lines, and summary lines
-        if (trimmedLine.isEmpty() || trimmedLine.startsWith("----") ||
-                trimmedLine.startsWith("Summary") || trimmedLine.startsWith("Team Number")) {
+        if (trimmedLine.isEmpty() || trimmedLine.startsWith("----") || trimmedLine.startsWith("Summary") || trimmedLine.startsWith("Team Number")) {
             return null;
         }
 
@@ -102,10 +96,7 @@ public class FileHandler {
                 }
 
                 // Create participant using the correct constructor
-                Participant participant = new Participant(
-                        id, name, email, game, skillLevel,
-                        preferredRole, personalityScore, personalityType
-                );
+                Participant participant = new Participant(id, name, email, game, skillLevel, preferredRole, personalityScore, personalityType);
 
                 // Set team number if available
                 if (!teamNumber.isEmpty()) {
@@ -129,7 +120,6 @@ public class FileHandler {
         System.err.println("Skipping invalid row (Not enough columns): " + trimmedLine);
         return null;
     }
-
 
 
     public static String createNewCSV() {
@@ -163,7 +153,6 @@ public class FileHandler {
     }
 
 
-
     // ---------------- SAVE PARTICIPANT ----------------
 
     public static void saveParticipant(String filePath, Participant p) {
@@ -171,17 +160,7 @@ public class FileHandler {
         try {
             writer = new FileWriter(filePath, true); // true for append mode
 
-            String line = String.join(",",
-                    p.getId(),
-                    p.getName(),
-                    p.getEmail(),
-                    p.getPreferredGame(),
-                    String.valueOf(p.getSkillLevel()),
-                    p.getPreferredRole().name(),
-                    String.valueOf(p.getPersonalityScore()),
-                    p.getPersonalityType().name(),
-                    p.getTeamNumber() != null ? p.getTeamNumber() : ""
-            );
+            String line = String.join(",", p.getId(), p.getName(), p.getEmail(), p.getPreferredGame(), String.valueOf(p.getSkillLevel()), p.getPreferredRole().name(), String.valueOf(p.getPersonalityScore()), p.getPersonalityType().name(), p.getTeamNumber() != null ? p.getTeamNumber() : "");
             writer.write(line + "\n");
             System.out.println("Participant saved to: " + filePath);
 
@@ -198,6 +177,7 @@ public class FileHandler {
                 }
             }
         }
+        LoggerService.logFileOperation("SAVE", filePath, "Saved participant: " + p.getId());
     }
 
     // ---------------- LOAD TEAMS FROM OUTPUT FILE ----------------
@@ -242,10 +222,7 @@ public class FileHandler {
                 int personalityScore = Integer.parseInt(data[7].trim());
                 PersonalityType personalityType = PersonalityType.fromString(data[8].trim());
 
-                Participant participant = new Participant(
-                        id, name, email, game, skillLevel,
-                        preferredRole, personalityScore, personalityType
-                );
+                Participant participant = new Participant(id, name, email, game, skillLevel, preferredRole, personalityScore, personalityType);
                 participant.setTeamNumber(teamNumber);
 
                 return participant;
@@ -259,6 +236,7 @@ public class FileHandler {
         return null;
 
     }
+
     public static void ensureCSVExists(String filePath) {
         File file = new File(filePath);
 
@@ -309,8 +287,6 @@ public class FileHandler {
 
         return null;
     }
-
-
 
 
 }

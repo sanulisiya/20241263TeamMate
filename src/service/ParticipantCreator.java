@@ -3,6 +3,7 @@ package service;
 import model.Participant;
 import model.RoleType;
 import model.PersonalityType;
+import utility.LoggerService;
 
 import java.util.*;
 import java.io.*;
@@ -90,6 +91,9 @@ public class ParticipantCreator {
             // ---------------- Save to CSV ----------------
             FileHandler.saveParticipant(newCSVPath, p);
 
+            // ---------------- SINGLE LOGGER CALL ----------------
+            LoggerService.logParticipantAction("CREATED", id, "Name: " + name + ", Game: " + preferredGame + ", Role: " + preferredRole);
+
             System.out.println("\nParticipant added successfully!");
             System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")");
             System.out.println("\nParticipant Details:");
@@ -111,8 +115,8 @@ public class ParticipantCreator {
         return raw.replaceAll("[^A-Za-z0-9]", "").substring(0, 16);
     }
 
-    // ---------------- Helpers ----------------
 
+    // ---------------- Helpers ----------------
     private static String getNonEmptyInput(Scanner sc, String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -149,4 +153,5 @@ public class ParticipantCreator {
                 Enter role number (1–5): 
                 """;
     }
+
 }

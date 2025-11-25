@@ -1,5 +1,6 @@
 import model.Participant;
 import service.*;
+import utility.LoggerService;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -16,12 +17,15 @@ public class MainCLI {
 
     public static void main(String[] args) {
 
+        LoggerService.info("Application started","MinCLI","main");
+
         Scanner sc = new Scanner(System.in);
         List<Participant> participants = new ArrayList<>();
         List<List<Participant>> teams = null;
         List<Participant> remainingPool = new ArrayList<>();
 
         while (true) {
+
             try {
                 System.out.println("\n==== TEAMMATE COMMUNITY SYSTEM ====");
                 System.out.println("Login as:");
@@ -42,6 +46,8 @@ public class MainCLI {
 
                 // ============================= PARTICIPANT FLOW =============================
                 if (loginChoice == 1) {
+                    LoggerService.info("Participant menu accessed", "MainCLI", "main");
+
                     System.out.println("\n--- PARTICIPANT MENU ---");
                     System.out.println("1. Add New Participant");
                     System.out.println("2. Login as Existing Participant");
@@ -52,6 +58,7 @@ public class MainCLI {
                         participantChoice = sc.nextInt();
                         sc.nextLine();
                     } catch (InputMismatchException e) {
+                        LoggerService.warn("Invalid input in participant menu - expected number", "MainCLI", "main");
                         System.out.println("Invalid input. Please enter a number.");
                         sc.nextLine();
                         continue;
@@ -59,6 +66,8 @@ public class MainCLI {
 
                     // ---- ADD NEW PARTICIPANT ----
                     if (participantChoice == 1) {
+                        LoggerService.info("Add new participant option selected", "MainCLI", "main");
+
                         try {
                             System.out.println("\nEnter the folder path where you want to save participant_data.csv");
                             System.out.println("Example: C:\\Users\\DELL\\Desktop");
@@ -67,6 +76,7 @@ public class MainCLI {
                             String folderPath = sc.nextLine().trim();
 
                             if (folderPath.isEmpty()) {
+                                LoggerService.warn("Empty folder path provided for new participant", "MainCLI", "main");
                                 System.out.println("Invalid folder. Returning to menu...\n");
                                 continue;
                             }
@@ -74,6 +84,7 @@ public class MainCLI {
                             // Ensure folder exists
                             File folder = new File(folderPath);
                             if (!folder.exists() || !folder.isDirectory()) {
+                                LoggerService.warn("Invalid folder path provided: " + folderPath, "MainCLI", "main");
                                 System.out.println("Folder not found. Returning to menu...\n");
                                 continue;
                             }
@@ -86,36 +97,44 @@ public class MainCLI {
                                 FileWriter writer = new FileWriter(csvFile);
                                 writer.write("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityScore,PersonalityType,TeamNumber\n");
                                 writer.close();
+                                LoggerService.logFileOperation("CREATE", newCSVPath, "New CSV file created");
                                 System.out.println("\nCreated new CSV file: " + newCSVPath);
                             } else {
+                                LoggerService.logFileOperation("ACCESS", newCSVPath, "Existing CSV file accessed");
                                 System.out.println("\nCSV file already exists. Adding participant to it.");
                             }
 
                             // Add the participant
+                            LoggerService.info("Starting participant creation process", "MainCLI", "main");
                             ParticipantCreator.createNewParticipant(newCSVPath);
 
+                            LoggerService.info("Participant added successfully", "MainCLI", "main");
                             System.out.println("\nParticipant added successfully!");
                             System.out.println("Saved to: " + newCSVPath);
 
                         } catch (Exception e) {
+                            LoggerService.error("Failed to add new participant", e, "MainCLI", "main");
                             System.out.println("Failed to add participant: " + e.getMessage());
-                            e.printStackTrace();
                         }
 
                         System.out.println("Returning to main menu...\n");
                         continue;
                     }
 
-
-
                     // ---- EXISTING PARTICIPANT LOGIN ----
                     else if (participantChoice == 2) {
+                        LoggerService.info("Existing participant login option selected", "MainCLI", "main");
+
                         System.out.print("Enter Participant ID :  ");
                         String participantId = sc.nextLine().trim();
 
+                        LoggerService.logAuthentication("PARTICIPANT", participantId, false); // Log attempt
+
                         try {
+                            LoggerService.logFileOperation("LOAD", FILE_PATH, "Loading participants for login verification");
                             participants = FileHandler.loadParticipantsSingleThread(FILE_PATH);
                         } catch (Exception e) {
+                            LoggerService.error("Error loading participants for login", e, "MainCLI", "main");
                             System.out.println("Error loading participants: " + e.getMessage());
                             continue;
                         }
@@ -126,6 +145,9 @@ public class MainCLI {
                                 .orElse(null);
 
                         if (found != null) {
+                            LoggerService.logAuthentication("PARTICIPANT", participantId, true); // Log successful login
+                            LoggerService.logParticipantAction("LOGIN", participantId, "Successful login");
+
                             System.out.println("\nParticipant Found!");
                             System.out.println(found);
 
@@ -133,19 +155,24 @@ public class MainCLI {
                             String yn = sc.nextLine().trim().toLowerCase();
 
                             if (yn.equals("yes") || yn.equals("y")) {
+                                LoggerService.info("Participant requested team view: " + participantId, "MainCLI", "main");
+
                                 try {
                                     // Check if team file exists using the updated TEAMS_OUTPUT_PATH
                                     File teamFile = new File(TEAMS_OUTPUT_PATH);
                                     if (!teamFile.exists()) {
+                                        LoggerService.warn("Team file not found for participant: " + participantId, "MainCLI", "main");
                                         System.out.println("\nNo teams have been formed yet. Please check later!");
                                         System.out.println("\nReturning to main menu...\n");
                                         continue;
                                     }
 
                                     // Load participants from team file using the correct method
+                                    LoggerService.logFileOperation("LOAD", TEAMS_OUTPUT_PATH, "Loading team assignments for participant");
                                     List<Participant> teamParticipants = FileHandler.loadTeamsFromOutput(TEAMS_OUTPUT_PATH);
 
                                     if (teamParticipants.isEmpty()) {
+                                        LoggerService.warn("No team participants found in file: " + TEAMS_OUTPUT_PATH, "MainCLI", "main");
                                         System.out.println("\nNo teams found in the team file.");
                                         System.out.println("\nReturning to main menu...\n");
                                         continue;
@@ -158,6 +185,7 @@ public class MainCLI {
                                             .orElse(null);
 
                                     if (teamParticipant == null || teamParticipant.getTeamNumber() == null || teamParticipant.getTeamNumber().isEmpty()) {
+                                        LoggerService.warn("Participant not assigned to any team: " + participantId, "MainCLI", "main");
                                         System.out.println("\nYou are not assigned to any team yet.");
                                         System.out.println("\nReturning to main menu...\n");
                                         continue;
@@ -169,6 +197,8 @@ public class MainCLI {
                                     List<Participant> teamMembers = teamParticipants.stream()
                                             .filter(p -> teamNumber.equals(p.getTeamNumber()))
                                             .collect(Collectors.toList());
+
+                                    LoggerService.info("Displaying team " + teamNumber + " for participant: " + participantId, "MainCLI", "main");
 
                                     System.out.println("\n You are in TEAM " + teamNumber);
                                     System.out.println("---- Team Members ----");
@@ -184,19 +214,25 @@ public class MainCLI {
                                     displayTeamStats(teamMembers);
 
                                 } catch (Exception e) {
+                                    LoggerService.error("Error loading team assignments for participant: " + participantId, e, "MainCLI", "main");
                                     System.out.println("Error loading teams: " + e.getMessage());
                                     System.out.println("Please make sure teams have been formed and saved by the organizer.");
                                 }
+                            } else {
+                                LoggerService.info("Participant declined team view: " + participantId, "MainCLI", "main");
                             }
 
                             System.out.println("\nReturning to main menu...\n");
                             continue;
 
                         } else {
+                            LoggerService.logAuthentication("PARTICIPANT", participantId, false); // Log failed login
+                            LoggerService.warn("Participant not found: " + participantId, "MainCLI", "main");
                             System.out.println("\nParticipant not found. Returning to main menu...");
                             continue;
                         }
                     } else {
+                        LoggerService.warn("Invalid participant option selected: " + participantChoice, "MainCLI", "main");
                         System.out.println("Invalid participant option.");
                         continue;
                     }
@@ -215,6 +251,7 @@ public class MainCLI {
                     }
 
                     System.out.println("\n PIN Verified! Access Granted.");
+                    LoggerService.logAuthentication("ORGANIZER", "PIN", pin.equals(ORGANIZER_PIN));
 
                     boolean organizerRunning = true;
                     String uploadedFilePath = null;
@@ -605,7 +642,7 @@ public class MainCLI {
 
                         } catch (Exception e) {
                             System.out.println("An error occurred in organizer panel: " + e.getMessage());
-                            e.printStackTrace();
+//                            e.printStackTrace();
                         }
                     }
                 }
@@ -621,7 +658,7 @@ public class MainCLI {
 
             } catch (Exception e) {
                 System.out.println("An unexpected error occurred: " + e.getMessage());
-                e.printStackTrace();
+//                e.printStackTrace();
             }
         }
     }

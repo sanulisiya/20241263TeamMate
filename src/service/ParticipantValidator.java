@@ -23,23 +23,22 @@ public class ParticipantValidator {
 
     // Name regex: letters and spaces, 2-50 chars
     private static final Pattern NAME_PATTERN = Pattern.compile(
-            "^[A-Za-z0-9_ ]+$"
+            "^[A-Za-z ]{2,50}$"
     );
 
-    // ID pattern (P followed by 3 digits)
+    // ID pattern - CORRECTED: P followed by 1-3 digits (P1, P10, P100)
     private static final Pattern ID_PATTERN = Pattern.compile(
-            "^[Pp]\\d{3}$"
+            "[Pp]\\d{3,}"
     );
 
-    // Validate ID
+    // Validate ID - CORRECTED
     public static boolean validateId(String id) {
-        return id.matches("[A-Za-z0-9]{8,20}");
+        return id != null && ID_PATTERN.matcher(id).matches();
     }
-
 
     // Validate name
     public static boolean validateName(String name) {
-        return name != null && NAME_PATTERN.matcher(name).matches() && name.length() >= 2 && name.length() <= 50;
+        return name != null && NAME_PATTERN.matcher(name).matches();
     }
 
     // Validate email
@@ -64,7 +63,7 @@ public class ParticipantValidator {
         if (game == null) return null;
         for (String g : ALLOWED_GAMES) {
             if (g.equalsIgnoreCase(game.trim())) {
-                return g; // return canonical name (e.g., "Valorant")
+                return g;
             }
         }
         return null;

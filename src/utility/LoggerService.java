@@ -1,14 +1,19 @@
 package utility;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class LoggerService {
 
-    private static final String LOG_FILE = "teammate_system.log";
+    private static final String LOG_FILE = getLogFilePath();
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static LogLevel currentLogLevel = LogLevel.INFO;
 
@@ -20,11 +25,48 @@ public class LoggerService {
     private LoggerService() {}
 
     /**
+     * Get proper log file path
+     */
+    private static String getLogFilePath() {
+        // Store in project directory (current working directory)
+        String projectDir = System.getProperty("user.dir");
+        return projectDir + File.separator + "teammate_system.log";
+    }
+
+    /**
+     * Ensure log directory exists - FIXED VERSION
+     */
+    private static void ensureLogDirectoryExists() {
+        try {
+            File logFile = new File(LOG_FILE);
+            File parentDir = logFile.getParentFile();
+
+            // Only create directories if parentDir is not null (file has a parent path)
+            if (parentDir != null && !parentDir.exists()) {
+                boolean created = parentDir.mkdirs();
+                if (created) {
+                    System.out.println("Created log directory: " + parentDir.getAbsolutePath());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to create log directory: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Set the current logging level
      */
     public static void setLogLevel(LogLevel level) {
         currentLogLevel = level;
         info("Log level changed to: " + level);
+    }
+
+    /**
+     * Get current log level
+     */
+    public static LogLevel getCurrentLogLevel() {
+        return currentLogLevel;
     }
 
     /**
@@ -64,6 +106,10 @@ public class LoggerService {
         log(LogLevel.WARN, message, e);
     }
 
+    public static void warn(String message, Exception e, String className, String methodName) {
+        log(LogLevel.WARN, formatMessage(message, className, methodName), e);
+    }
+
     /**
      * Log error messages
      */
@@ -84,7 +130,7 @@ public class LoggerService {
     }
 
     /**
-     * Main logging method
+     * Main logging method - FIXED VERSION
      */
     private static void log(LogLevel level, String message, Exception e) {
         // Check if we should log this message based on current log level
@@ -96,32 +142,63 @@ public class LoggerService {
         String logEntry = String.format("[%s] [%s] %s", timestamp, level, message);
 
         // Print to console
-        System.out.println(logEntry);
-
-        // Print stack trace if exception provided
-        if (e != null) {
-            e.printStackTrace();
+        if (level == LogLevel.ERROR) {
+            System.err.println(logEntry);
+        } else {
+            System.out.println(logEntry);
         }
 
-        // Write to file
-        writeToFile(logEntry, e);
+        // Print stack trace to console if exception provided
+        if (e != null) {
+            if (level == LogLevel.ERROR) {
+                System.err.println("Exception details:");
+                e.printStackTrace(System.err);
+            } else {
+                System.out.println("Exception details:");
+                e.printStackTrace(System.out);
+            }
+        }
+
+        // Write to file with better error handling
+        boolean writeSuccess = writeToFile(logEntry, e);
+        if (!writeSuccess && level == LogLevel.ERROR) {
+            System.err.println("CRITICAL: Failed to write log to file: " + logEntry);
+        }
     }
 
     /**
-     * Write log entry to file
+     * Write log entry to file - FIXED VERSION
      */
-    private static synchronized void writeToFile(String logEntry, Exception e) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(LOG_FILE, true))) {
-            writer.println(logEntry);
+    private static synchronized boolean writeToFile(String logEntry, Exception e) {
+        try {
+            ensureLogDirectoryExists(); // Ensure directory exists
 
-            // Write exception stack trace if provided
-            if (e != null) {
-                e.printStackTrace(writer);
+            try (PrintWriter writer = new PrintWriter(new FileWriter(LOG_FILE, true))) {
+                writer.println(logEntry);
+
+                // Write exception stack trace if provided
+                if (e != null) {
+                    writer.println("Exception Details:");
+                    StringWriter sw = new StringWriter();
+                    PrintWriter pw = new PrintWriter(sw);
+                    e.printStackTrace(pw);
+                    writer.println(sw.toString());
+                    writer.println(); // Add empty line for separation
+                }
+
+                writer.flush();
+                return true;
             }
 
-            writer.flush();
         } catch (IOException ioException) {
-            System.err.println("Failed to write to log file: " + ioException.getMessage());
+            // Use System.err since logging might be broken
+            System.err.println("Failed to write to log file '" + LOG_FILE + "': " + ioException.getMessage());
+            ioException.printStackTrace();
+            return false;
+        } catch (Exception ex) {
+            System.err.println("Unexpected error while writing to log file: " + ex.getMessage());
+            ex.printStackTrace();
+            return false;
         }
     }
 
@@ -154,6 +231,27 @@ public class LoggerService {
     }
 
     /**
+     * Enhanced team formation logging with complete teams and remaining participants
+     */
+    public static void logTeamFormation(String action, int teamCount, int participantCount,
+                                        int completeTeams, int remainingParticipants) {
+        info(String.format("TEAM FORMATION: %s - Total Teams: %d, Participants: %d, Complete Teams: %d, Remaining: %d",
+                        action, teamCount, participantCount, completeTeams, remainingParticipants),
+                "TeamBuilder", "logTeamFormation");
+    }
+
+    /**
+     * Detailed team formation logging with map of details
+     */
+    public static void logTeamFormation(String action, Map<String, Object> formationDetails) {
+        String details = formationDetails.entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue())
+                .collect(Collectors.joining(", "));
+        info(String.format("TEAM FORMATION: %s - %s", action, details),
+                "TeamBuilder", "logTeamFormation");
+    }
+
+    /**
      * Log file operations
      */
     public static void logFileOperation(String operation, String filePath, String result) {
@@ -174,18 +272,47 @@ public class LoggerService {
      * Clear log file (useful for testing)
      */
     public static void clearLog() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(LOG_FILE))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(LOG_FILE, false))) {
             writer.print("");
-            info("Log file cleared");
+            System.out.println("Log file cleared successfully");
         } catch (IOException e) {
-            error("Failed to clear log file", e);
+            System.err.println("Failed to clear log file: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     /**
-     * Get current log file path
+     * Test the logger functionality
      */
-    public static String getLogFilePath() {
-        return LOG_FILE;
+    public static void testLogger() {
+        System.out.println("=== Logger Service Test ===");
+        System.out.println("Log file path: " + LOG_FILE);
+        System.out.println("Current working directory: " + System.getProperty("user.dir"));
+
+        // Test different log levels
+        debug("This is a debug message");
+        info("This is an info message");
+        warn("This is a warning message");
+        error("This is an error message");
+
+        // Test with exception
+        try {
+            throw new RuntimeException("Test exception for logging");
+        } catch (RuntimeException e) {
+            error("This is an error with exception", e);
+        }
+
+        // Test with class and method context
+        info("Testing class/method context", "LoggerService", "testLogger");
+
+        System.out.println("=== Logger Test Completed ===");
+    }
+
+    /**
+     * Main method for testing
+     */
+    public static void main(String[] args) {
+        testLogger();
+        System.out.println("\nCheck the log file at: " + getLogFilePath());
     }
 }

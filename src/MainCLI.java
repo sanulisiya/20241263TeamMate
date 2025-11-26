@@ -10,10 +10,11 @@ import java.util.stream.Collectors;
 public class MainCLI {
 
     private static final String FILE_PATH = "C:\\Users\\DELL\\Desktop\\participants_sample.csv";
-    private static String TEAMS_OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv"; // Made non-final and updated based on user input
-
-    // Organizer login PIN
+    private static String TEAMS_OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv";
     private static final String ORGANIZER_PIN = "1234";
+
+    // Store the current uploaded file path for participant login checks
+    private static String currentUploadedFilePath = null;
 
     public static void main(String[] args) {
 
@@ -125,119 +126,117 @@ public class MainCLI {
                     else if (participantChoice == 2) {
                         LoggerService.info("Existing participant login option selected", "MainCLI", "main");
 
-                        System.out.print("Enter Participant ID :  ");
+                        // Check if organizer has uploaded any file
+                        if (currentUploadedFilePath == null) {
+                            System.out.println("\n❌ Organizer didn't upload any file yet.");
+                            System.out.println("Please ask the organizer to upload a CSV file first.");
+                            System.out.println("Returning to main menu...\n");
+                            continue;
+                        }
+
+                        System.out.print("Enter Participant ID: ");
                         String participantId = sc.nextLine().trim();
 
-                        LoggerService.logAuthentication("PARTICIPANT", participantId, false); // Log attempt
+                        LoggerService.logAuthentication("PARTICIPANT", participantId, false);
 
                         try {
-                            LoggerService.logFileOperation("LOAD", FILE_PATH, "Loading participants for login verification");
-                            participants = FileHandler.loadParticipantsSingleThread(FILE_PATH);
+                            // Load participants from organizer's uploaded file
+                            participants = FileHandler.loadParticipantsSingleThread(currentUploadedFilePath);
+
+                            // Simple search for participant
+                            Participant found = null;
+                            for (Participant p : participants) {
+                                if (p.getId().equalsIgnoreCase(participantId)) {
+                                    found = p;
+                                    break;
+                                }
+                            }
+
+                            if (found != null) {
+                                LoggerService.logAuthentication("PARTICIPANT", participantId, true);
+                                LoggerService.logParticipantAction("LOGIN", participantId, "Successful login");
+
+                                System.out.println("\n✅ Participant Found!");
+                                System.out.println(found);
+
+                                System.out.print("\nDo you want to view your assigned team? (yes/no): ");
+                                String yn = sc.nextLine().trim().toLowerCase();
+
+                                if (yn.equals("yes") || yn.equals("y")) {
+                                    LoggerService.info("Participant requested team view: " + participantId, "MainCLI", "main");
+
+                                    try {
+                                        // Check if team file exists
+                                        File teamFile = new File(TEAMS_OUTPUT_PATH);
+                                        if (!teamFile.exists()) {
+                                            System.out.println("\nNo teams have been formed yet. Please check later!");
+                                            System.out.println("\nReturning to main menu...\n");
+                                            continue;
+                                        }
+
+                                        // Load team assignments
+                                        List<Participant> teamParticipants = FileHandler.loadTeamsFromOutput(TEAMS_OUTPUT_PATH);
+
+                                        // Find participant in team file
+                                        Participant teamParticipant = null;
+                                        for (Participant p : teamParticipants) {
+                                            if (p.getId().equalsIgnoreCase(participantId)) {
+                                                teamParticipant = p;
+                                                break;
+                                            }
+                                        }
+
+                                        if (teamParticipant == null || teamParticipant.getTeamNumber() == null) {
+                                            System.out.println("\nYou are not assigned to any team yet.");
+                                            System.out.println("\nReturning to main menu...\n");
+                                            continue;
+                                        }
+
+                                        String teamNumber = teamParticipant.getTeamNumber();
+
+                                        // Find all participants in the same team
+                                        List<Participant> teamMembers = new ArrayList<>();
+                                        for (Participant p : teamParticipants) {
+                                            if (teamNumber.equals(p.getTeamNumber())) {
+                                                teamMembers.add(p);
+                                            }
+                                        }
+
+                                        System.out.println("\n You are in TEAM " + teamNumber);
+                                        System.out.println("---- Team Members ----");
+                                        for (Participant member : teamMembers) {
+                                            System.out.println("  " + member.getName() + " (" + member.getId() + ")");
+                                            System.out.println("    Game: " + member.getPreferredGame() +
+                                                    " | Skill: " + member.getSkillLevel() +
+                                                    " | Role: " + member.getPreferredRole() +
+                                                    " | Personality: " + member.getPersonalityType());
+                                        }
+
+                                        // Display team statistics
+                                        displayTeamStats(teamMembers);
+
+                                    } catch (Exception e) {
+                                        System.out.println("Error loading teams: " + e.getMessage());
+                                    }
+                                }
+
+                                System.out.println("\nReturning to main menu...\n");
+                                continue;
+
+                            } else {
+                                LoggerService.logAuthentication("PARTICIPANT", participantId, false);
+                                System.out.println("\n❌ Participant not found.");
+                                System.out.println("Please check your ID and try again.");
+                                System.out.println("Returning to main menu...");
+                                continue;
+                            }
+
                         } catch (Exception e) {
-                            LoggerService.error("Error loading participants for login", e, "MainCLI", "main");
                             System.out.println("Error loading participants: " + e.getMessage());
                             continue;
                         }
-
-                        Participant found = participants.stream()
-                                .filter(p -> p.getId().equalsIgnoreCase(participantId))
-                                .findFirst()
-                                .orElse(null);
-
-                        if (found != null) {
-                            LoggerService.logAuthentication("PARTICIPANT", participantId, true); // Log successful login
-                            LoggerService.logParticipantAction("LOGIN", participantId, "Successful login");
-
-                            System.out.println("\nParticipant Found!");
-                            System.out.println(found);
-
-                            System.out.print("\nDo you want to view your assigned team? (yes/no): ");
-                            String yn = sc.nextLine().trim().toLowerCase();
-
-                            if (yn.equals("yes") || yn.equals("y")) {
-                                LoggerService.info("Participant requested team view: " + participantId, "MainCLI", "main");
-
-                                try {
-                                    // Check if team file exists using the updated TEAMS_OUTPUT_PATH
-                                    File teamFile = new File(TEAMS_OUTPUT_PATH);
-                                    if (!teamFile.exists()) {
-                                        LoggerService.warn("Team file not found for participant: " + participantId, "MainCLI", "main");
-                                        System.out.println("\nNo teams have been formed yet. Please check later!");
-                                        System.out.println("\nReturning to main menu...\n");
-                                        continue;
-                                    }
-
-                                    // Load participants from team file using the correct method
-                                    LoggerService.logFileOperation("LOAD", TEAMS_OUTPUT_PATH, "Loading team assignments for participant");
-                                    List<Participant> teamParticipants = FileHandler.loadTeamsFromOutput(TEAMS_OUTPUT_PATH);
-
-                                    if (teamParticipants.isEmpty()) {
-                                        LoggerService.warn("No team participants found in file: " + TEAMS_OUTPUT_PATH, "MainCLI", "main");
-                                        System.out.println("\nNo teams found in the team file.");
-                                        System.out.println("\nReturning to main menu...\n");
-                                        continue;
-                                    }
-
-                                    // Find the participant in team file and get their team number
-                                    Participant teamParticipant = teamParticipants.stream()
-                                            .filter(p -> p.getId().equalsIgnoreCase(participantId))
-                                            .findFirst()
-                                            .orElse(null);
-
-                                    if (teamParticipant == null || teamParticipant.getTeamNumber() == null || teamParticipant.getTeamNumber().isEmpty()) {
-                                        LoggerService.warn("Participant not assigned to any team: " + participantId, "MainCLI", "main");
-                                        System.out.println("\nYou are not assigned to any team yet.");
-                                        System.out.println("\nReturning to main menu...\n");
-                                        continue;
-                                    }
-
-                                    String teamNumber = teamParticipant.getTeamNumber();
-
-                                    // Find all participants in the same team
-                                    List<Participant> teamMembers = teamParticipants.stream()
-                                            .filter(p -> teamNumber.equals(p.getTeamNumber()))
-                                            .collect(Collectors.toList());
-
-                                    LoggerService.info("Displaying team " + teamNumber + " for participant: " + participantId, "MainCLI", "main");
-
-                                    System.out.println("\n You are in TEAM " + teamNumber);
-                                    System.out.println("---- Team Members ----");
-                                    for (Participant member : teamMembers) {
-                                        System.out.println("  " + member.getName() + " (" + member.getId() + ")");
-                                        System.out.println("    Game: " + member.getPreferredGame() +
-                                                " | Skill: " + member.getSkillLevel() +
-                                                " | Role: " + member.getPreferredRole() +
-                                                " | Personality: " + member.getPersonalityType());
-                                    }
-
-                                    // Display team statistics
-                                    displayTeamStats(teamMembers);
-
-                                } catch (Exception e) {
-                                    LoggerService.error("Error loading team assignments for participant: " + participantId, e, "MainCLI", "main");
-                                    System.out.println("Error loading teams: " + e.getMessage());
-                                    System.out.println("Please make sure teams have been formed and saved by the organizer.");
-                                }
-                            } else {
-                                LoggerService.info("Participant declined team view: " + participantId, "MainCLI", "main");
-                            }
-
-                            System.out.println("\nReturning to main menu...\n");
-                            continue;
-
-                        } else {
-                            LoggerService.logAuthentication("PARTICIPANT", participantId, false); // Log failed login
-                            LoggerService.warn("Participant not found: " + participantId, "MainCLI", "main");
-                            System.out.println("\nParticipant not found. Returning to main menu...");
-                            continue;
-                        }
-                    } else {
-                        LoggerService.warn("Invalid participant option selected: " + participantChoice, "MainCLI", "main");
-                        System.out.println("Invalid participant option.");
-                        continue;
                     }
                 }
-
                 // ============================= ORGANIZER FLOW =============================
                 else if (loginChoice == 2) {
 
@@ -285,7 +284,9 @@ public class MainCLI {
                                         participants = FileHandler.loadParticipantsSingleThread(path);
                                         if (participants != null && !participants.isEmpty()) {
                                             uploadedFilePath = path;
+                                            currentUploadedFilePath = path; // Store for participant login
                                             System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
+                                            System.out.println("This file will now be used for participant login verification.");
 
                                             // Display sample of loaded participants
                                             System.out.println("\nSample of loaded participants:");
@@ -310,6 +311,7 @@ public class MainCLI {
                                             }
                                             System.out.println("\n--- PARTICIPANT LIST ---");
                                             System.out.println("Total Participants: " + participants.size());
+                                            System.out.println("Source File: " + (uploadedFilePath != null ? uploadedFilePath : "Default file"));
                                             for (int i = 0; i < participants.size(); i++) {
                                                 System.out.println((i + 1) + ". " + participants.get(i));
                                             }
@@ -350,6 +352,7 @@ public class MainCLI {
                                                     System.out.println("Merging files and generating IDs for new participants...");
                                                     workingParticipants = CSVMerger.mergeCSVFiles(uploadedFilePath, participantFile, tempMergedPath);
                                                     uploadedFilePath = tempMergedPath; // Update to use merged file
+                                                    currentUploadedFilePath = tempMergedPath; // Update for participant login
                                                     System.out.println("✓ Successfully merged files! Total participants: " + workingParticipants.size());
 
                                                     // Show sample of new IDs assigned
@@ -599,7 +602,6 @@ public class MainCLI {
                                     }
                                     break;
 
-
                                 case 5:
                                     try {
                                         // Use the updated TEAMS_OUTPUT_PATH variable instead of hardcoded OUTPUT_PATH
@@ -642,7 +644,6 @@ public class MainCLI {
 
                         } catch (Exception e) {
                             System.out.println("An error occurred in organizer panel: " + e.getMessage());
-//                            e.printStackTrace();
                         }
                     }
                 }
@@ -658,7 +659,6 @@ public class MainCLI {
 
             } catch (Exception e) {
                 System.out.println("An unexpected error occurred: " + e.getMessage());
-//                e.printStackTrace();
             }
         }
     }

@@ -7,7 +7,6 @@ import utility.LoggerService;
 
 import java.util.*;
 import java.io.*;
-import java.util.UUID;
 
 public class ParticipantCreator {
 
@@ -20,20 +19,30 @@ public class ParticipantCreator {
     };
 
     public static void createNewParticipant(String newCSVPath) {
-        FileHandler.ensureCSVExists( newCSVPath);
-
+        FileHandler.ensureCSVExists(newCSVPath);
 
         Scanner sc = new Scanner(System.in);
 
         try {
             System.out.println("\n=== Add New Participant ===");
 
+            // ---------------- ID Input ----------------
+            String id;
+            do {
+                id = getNonEmptyInput(sc, "Enter Participant ID (e.g., P001, P10, P100): ");
+                if (!ParticipantValidator.validateId(id)) {
+                    System.out.println("Invalid ID format. Please use format like P1, P10, P100 (no leading zeros).");
+                } else if (isIdAlreadyExists(newCSVPath, id)) {
+                    System.out.println("This ID already exists. Please use a different ID.");
+                }
+            } while (!ParticipantValidator.validateId(id) || isIdAlreadyExists(newCSVPath, id));
+
             // ---------------- Name Input ----------------
             String name;
             do {
                 name = getNonEmptyInput(sc, "Enter Name: ");
                 if (!ParticipantValidator.validateName(name)) {
-                    System.out.println("Invalid name. Only letters and spaces allowed (2–50 characters).");
+                    System.out.println("Invalid name. Only letters and spaces allowed (2-50 characters).");
                 }
             } while (!ParticipantValidator.validateName(name));
 
@@ -50,22 +59,21 @@ public class ParticipantCreator {
             String preferredGame;
             do {
                 preferredGame = getNonEmptyInput(sc,
-                        "Enter Preferred Game (Valorant, Dota, FIFA, Basketball, Badminton): ");
+                        "Enter Preferred Game (Valorant, Dota, DOTA 2, FIFA, Basketball, Badminton, Chess, CS:GO): ");
                 if (!ParticipantValidator.validateGame(preferredGame)) {
-                    System.out.println("Invalid game selection.");
+                    System.out.println("Invalid game selection. Please choose from the allowed games.");
                 }
             } while (!ParticipantValidator.validateGame(preferredGame));
+
+            // Normalize game name
+            preferredGame = ParticipantValidator.getNormalizedGame(preferredGame);
 
             // ---------------- Role Selection ----------------
             int roleSelection = getValidatedInt(sc, roleTablePrompt(), 1, 5);
             RoleType preferredRole = ALLOWED_ROLES[roleSelection - 1];
 
             // ---------------- Skill Level ----------------
-            int skillLevel = getValidatedInt(sc, "Enter Skill Level (1–10): ", 1, 10);
-
-            // ---------------- AUTO-GENERATED UNIQUE ID (METHOD 2) ----------------
-            String id = generateUniqueId(name, email, preferredRole.name());
-            System.out.println("Assigned Participant ID: " + id);
+            int skillLevel = getValidatedInt(sc, "Enter Skill Level (1-10): ", 1, 10);
 
             // ---------------- Personality Survey ----------------
             System.out.println("\nNow, let's complete the 5-question Personality Survey:");
@@ -92,7 +100,8 @@ public class ParticipantCreator {
             FileHandler.saveParticipant(newCSVPath, p);
 
             // ---------------- SINGLE LOGGER CALL ----------------
-            LoggerService.logParticipantAction("CREATED", id, "Name: " + name + ", Game: " + preferredGame + ", Role: " + preferredRole);
+            LoggerService.logParticipantAction("CREATED", id,
+                    "Name: " + name + ", Game: " + preferredGame + ", Role: " + preferredRole);
 
             System.out.println("\nParticipant added successfully!");
             System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")");
@@ -102,21 +111,11 @@ public class ParticipantCreator {
         } catch (Exception e) {
             System.out.println("Unexpected error occurred.");
             System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    // ===============================================================
-    // UNIQUE ID GENERATOR (Method 2: UUID + name + email + role)
-    // ===============================================================
-    private static String generateUniqueId(String name, String email, String role) {
-        String raw = name + "-" + email + "-" + role + "-" + UUID.randomUUID();
-
-        // Remove symbols, keep letters & digits, limit to 16 chars
-        return raw.replaceAll("[^A-Za-z0-9]", "").substring(0, 16);
-    }
-
-
-    // ---------------- Helpers ----------------
+    // ---------------- Helper Methods ----------------
     private static String getNonEmptyInput(Scanner sc, String prompt) {
         while (true) {
             System.out.print(prompt);
@@ -134,7 +133,7 @@ public class ParticipantCreator {
                 if (value >= min && value <= max) return value;
                 System.out.println("Value must be between " + min + " and " + max + ".");
             } catch (Exception e) {
-                System.out.println("Invalid number.");
+                System.out.println("Invalid number. Please enter a numeric value.");
             }
         }
     }
@@ -150,8 +149,25 @@ public class ParticipantCreator {
                 │ 4  │ Supporter   │ Flexible, helps coordinate actions.     │
                 │ 5  │ Coordinator │ Communication leader.                   │
                 └────┴─────────────┴─────────────────────────────────────────┘
-                Enter role number (1–5): 
-                """;
+                Enter role number (1-5):\s""";
     }
 
+    // ---------------- ID Validation Helper ----------------
+    private static boolean isIdAlreadyExists(String csvPath, String id) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(csvPath))) {
+            String line;
+            // Skip header
+            reader.readLine();
+
+            while ((line = reader.readLine()) != null) {
+                String[] fields = line.split(",");
+                if (fields.length > 0 && fields[0].equalsIgnoreCase(id.trim())) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Warning: Could not check existing IDs.");
+        }
+        return false;
+    }
 }

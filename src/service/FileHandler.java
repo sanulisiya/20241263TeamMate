@@ -4,6 +4,8 @@ import model.Participant;
 import model.PersonalityType;
 import model.RoleType;
 import utility.LoggerService;
+import exception.FileOperationException;
+import exception.ParticipantValidationException;
 
 import javax.swing.*;
 import java.io.*;
@@ -18,7 +20,6 @@ public class FileHandler {
 
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
         List<Participant> participants = new ArrayList<>();
-        LoggerService.logFileOperation("LOAD", filePath, "Loaded " + participants.size() + " participants");
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -42,9 +43,22 @@ public class FileHandler {
             }
 
         } catch (IOException e) {
-            System.err.println("Error reading file: " + e.getMessage());
+            throw new FileOperationException(
+                    "Error reading participant file: " + e.getMessage(),
+                    filePath,
+                    "READ",
+                    e
+            );
+        } catch (Exception e) {
+            throw new FileOperationException(
+                    "Unexpected error while loading participants",
+                    filePath,
+                    "READ",
+                    e
+            );
         }
 
+        LoggerService.logFileOperation("LOAD", filePath, "Loaded " + participants.size() + " participants");
         return participants;
     }
 
@@ -107,25 +121,38 @@ public class FileHandler {
             }
 
         } catch (NumberFormatException e) {
-            System.err.println("Skipping invalid row (Invalid number format): " + trimmedLine);
-            return null;
+            throw new ParticipantValidationException(
+                    "Invalid number format in CSV row: " + trimmedLine,
+                    "CSV_ROW",
+                    trimmedLine,
+                    e
+            );
         } catch (IllegalArgumentException e) {
-            System.err.println("Skipping invalid row (Invalid enum value): " + trimmedLine);
-            return null;
+            throw new ParticipantValidationException(
+                    "Invalid enum value in CSV row: " + trimmedLine,
+                    "CSV_ROW",
+                    trimmedLine,
+                    e
+            );
         } catch (Exception e) {
-            System.err.println("Skipping invalid row: " + trimmedLine + " Error: " + e.getMessage());
-            return null;
+            throw new ParticipantValidationException(
+                    "Invalid CSV row format: " + trimmedLine,
+                    "CSV_ROW",
+                    trimmedLine,
+                    e
+            );
         }
 
-        System.err.println("Skipping invalid row (Not enough columns): " + trimmedLine);
-        return null;
+        throw new ParticipantValidationException(
+                "Not enough columns in CSV row: " + trimmedLine,
+                "CSV_ROW",
+                trimmedLine
+        );
     }
-
 
     public static String createNewCSV() {
         // Get Desktop path dynamically
         String desktopPath = System.getProperty("user.home") + "/Desktop";
-
 
         // Generate filename with timestamp
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
@@ -137,8 +164,12 @@ public class FileHandler {
             writer.append("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType,PersonalityScore\n");
             System.out.println("CSV file created successfully: " + fileName);
         } catch (IOException e) {
-            System.out.println("Error creating CSV file: " + e.getMessage());
-            return null;
+            throw new FileOperationException(
+                    "Error creating CSV file: " + e.getMessage(),
+                    fileName,
+                    "CREATE",
+                    e
+            );
         }
 
         return fileName; // Return the path of the newly created CSV
@@ -152,7 +183,6 @@ public class FileHandler {
         System.out.println("You can now save participants to: " + newCSV);
     }
 
-
     // ---------------- SAVE PARTICIPANT ----------------
 
     public static void saveParticipant(String filePath, Participant p) {
@@ -165,8 +195,12 @@ public class FileHandler {
             System.out.println("Participant saved to: " + filePath);
 
         } catch (IOException e) {
-            System.out.println("Error saving participant: " + e.getMessage());
-            e.printStackTrace();
+            throw new FileOperationException(
+                    "Error saving participant to file: " + e.getMessage(),
+                    filePath,
+                    "SAVE",
+                    e
+            );
         } finally {
             // Ensure writer is always closed
             if (writer != null) {
@@ -195,7 +229,19 @@ public class FileHandler {
             }
 
         } catch (IOException e) {
-            System.err.println("Error reading team file: " + e.getMessage());
+            throw new FileOperationException(
+                    "Error reading team file: " + e.getMessage(),
+                    filePath,
+                    "READ",
+                    e
+            );
+        } catch (Exception e) {
+            throw new FileOperationException(
+                    "Unexpected error while loading teams",
+                    filePath,
+                    "READ",
+                    e
+            );
         }
 
         return teamParticipants;
@@ -229,12 +275,19 @@ public class FileHandler {
             }
 
         } catch (Exception e) {
-            System.err.println("Skipping invalid team row: " + trimmedLine + " Error: " + e.getMessage());
-            return null;
+            throw new ParticipantValidationException(
+                    "Invalid team participant row: " + trimmedLine,
+                    "TEAM_ROW",
+                    trimmedLine,
+                    e
+            );
         }
 
-        return null;
-
+        throw new ParticipantValidationException(
+                "Not enough columns in team participant row: " + trimmedLine,
+                "TEAM_ROW",
+                trimmedLine
+        );
     }
 
     public static void ensureCSVExists(String filePath) {
@@ -256,7 +309,12 @@ public class FileHandler {
             }
 
         } catch (Exception e) {
-            System.out.println("Could not create CSV file: " + e.getMessage());
+            throw new FileOperationException(
+                    "Could not create CSV file: " + e.getMessage(),
+                    filePath,
+                    "CREATE",
+                    e
+            );
         }
     }
 
@@ -282,11 +340,14 @@ public class FileHandler {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new FileOperationException(
+                    "Error creating CSV file via file chooser: " + e.getMessage(),
+                    "user_selected_path",
+                    "CREATE",
+                    e
+            );
         }
 
         return null;
     }
-
-
 }

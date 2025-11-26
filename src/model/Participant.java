@@ -1,5 +1,7 @@
 package model;
 
+import exception.ParticipantValidationException;
+
 public class Participant {
     private String id;
     private String name;
@@ -15,21 +17,27 @@ public class Participant {
     // Constructor
     public Participant(String id, String name, String email, String preferredGame, int skillLevel,
                        RoleType preferredRole, int personalityScore, PersonalityType personalityType) {
-        // Validate critical fields
+        // Validate critical fields with custom exceptions
         if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("Participant ID cannot be null or empty");
+            throw new ParticipantValidationException("Participant ID cannot be null or empty", "ID", id);
         }
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Participant name cannot be null or empty");
+            throw new ParticipantValidationException("Participant name cannot be null or empty", "Name", name);
         }
         if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Participant email cannot be null or empty");
+            throw new ParticipantValidationException("Participant email cannot be null or empty", "Email", email);
         }
         if (skillLevel < 1 || skillLevel > 10) {
-            throw new IllegalArgumentException("Skill level must be between 1 and 10");
+            throw new ParticipantValidationException("Skill level must be between 1 and 10", "SkillLevel", String.valueOf(skillLevel));
         }
         if (personalityScore < 0 || personalityScore > 100) {
-            throw new IllegalArgumentException("Personality score must be between 0 and 100");
+            throw new ParticipantValidationException("Personality score must be between 0 and 100", "PersonalityScore", String.valueOf(personalityScore));
+        }
+        if (preferredRole == null) {
+            throw new ParticipantValidationException("Preferred role cannot be null", "PreferredRole", "null");
+        }
+        if (personalityType == null) {
+            throw new ParticipantValidationException("Personality type cannot be null", "PersonalityType", "null");
         }
 
         this.id = id.trim();
@@ -50,6 +58,15 @@ public class Participant {
     }
 
     public Participant(String id, String trim, String trim1, String trim2, int skillLevel, RoleType preferredRole, String teamNumber, PersonalityType personalityType) {
+        // This constructor seems incomplete - consider validating parameters
+        this.id = id;
+        this.name = trim;
+        this.email = trim1;
+        this.preferredGame = trim2;
+        this.skillLevel = skillLevel;
+        this.preferredRole = preferredRole;
+        this.teamNumber = teamNumber;
+        this.personalityType = personalityType;
     }
 
     // ---------------- Getters ----------------
@@ -96,21 +113,21 @@ public class Participant {
     // ---------------- Setters ----------------
     public void setId(String id) {
         if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID cannot be null or empty");
+            throw new ParticipantValidationException("ID cannot be null or empty", "ID", id);
         }
         this.id = id.trim();
     }
 
     public void setName(String name) {
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Name cannot be null or empty");
+            throw new ParticipantValidationException("Name cannot be null or empty", "Name", name);
         }
         this.name = name.trim();
     }
 
     public void setEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Email cannot be null or empty");
+            throw new ParticipantValidationException("Email cannot be null or empty", "Email", email);
         }
         this.email = email.trim();
     }
@@ -121,23 +138,29 @@ public class Participant {
 
     public void setSkillLevel(int skillLevel) {
         if (skillLevel < 1 || skillLevel > 10) {
-            throw new IllegalArgumentException("Skill level must be between 1 and 10");
+            throw new ParticipantValidationException("Skill level must be between 1 and 10", "SkillLevel", String.valueOf(skillLevel));
         }
         this.skillLevel = skillLevel;
     }
 
     public void setPreferredRole(RoleType preferredRole) {
+        if (preferredRole == null) {
+            throw new ParticipantValidationException("Preferred role cannot be null", "PreferredRole", "null");
+        }
         this.preferredRole = preferredRole;
     }
 
     public void setPersonalityScore(int personalityScore) {
         if (personalityScore < 0 || personalityScore > 100) {
-            throw new IllegalArgumentException("Personality score must be between 0 and 100");
+            throw new ParticipantValidationException("Personality score must be between 0 and 100", "PersonalityScore", String.valueOf(personalityScore));
         }
         this.personalityScore = personalityScore;
     }
 
     public void setPersonalityType(PersonalityType personalityType) {
+        if (personalityType == null) {
+            throw new ParticipantValidationException("Personality type cannot be null", "PersonalityType", "null");
+        }
         this.personalityType = personalityType;
     }
 

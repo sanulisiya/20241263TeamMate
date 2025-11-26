@@ -137,142 +137,142 @@ public class CSVMerger {
     }
 
 
-    /**
-     * Quick merge without saving to file - just returns merged list
-     */
-    public static List<Participant> quickMerge(String organizerFilePath, String participantFilePath) {
-        List<Participant> allParticipants = new ArrayList<>();
-        Set<String> emailSet = new HashSet<>();
+//    /**
+//     * Quick merge without saving to file - just returns merged list
+//     */
+//    public static List<Participant> quickMerge(String organizerFilePath, String participantFilePath) {
+//        List<Participant> allParticipants = new ArrayList<>();
+//        Set<String> emailSet = new HashSet<>();
+//
+//        try {
+//            List<Participant> organizerParticipants = FileHandler.loadParticipantsSingleThread(organizerFilePath);
+//            List<Participant> participantParticipants = FileHandler.loadParticipantsSingleThread(participantFilePath);
+//
+//            // Find highest ID
+//            int highestId = findHighestParticipantId(organizerParticipants);
+//
+//            // Add organizer participants first
+//            for (Participant p : organizerParticipants) {
+//                allParticipants.add(p);
+//                emailSet.add(p.getEmail().toLowerCase().trim());
+//            }
+//
+//            // Add participant-added participants with new IDs
+//            for (Participant p : participantParticipants) {
+//                String email = p.getEmail().toLowerCase().trim();
+//
+//                if (!emailSet.contains(email)) {
+//                    String newId = generateNewParticipantId(highestId);
+//                    Participant newParticipant = createParticipantWithNewId(p, newId);
+//                    allParticipants.add(newParticipant);
+//                    emailSet.add(email);
+//                    highestId++;
+//                }
+//            }
+//
+//        } catch (Exception e) {
+//            System.out.println("Error in quick merge: " + e.getMessage());
+//        }
+//
+//        return allParticipants;
+//    }
 
-        try {
-            List<Participant> organizerParticipants = FileHandler.loadParticipantsSingleThread(organizerFilePath);
-            List<Participant> participantParticipants = FileHandler.loadParticipantsSingleThread(participantFilePath);
 
-            // Find highest ID
-            int highestId = findHighestParticipantId(organizerParticipants);
+//    /**
+//     * Alternative method that preserves original participant IDs if they follow the format
+//     * and only generates new IDs for those that don't
+//     */
+//    public static List<Participant> smartMerge(String organizerFilePath, String participantFilePath, String outputPath) {
+//        List<Participant> allParticipants = new ArrayList<>();
+//        Set<String> emailSet = new HashSet<>();
+//        Set<String> usedIds = new HashSet<>();
+//
+//        try {
+//            // Load both files
+//            List<Participant> organizerParticipants = FileHandler.loadParticipantsSingleThread(organizerFilePath);
+//            List<Participant> participantParticipants = FileHandler.loadParticipantsSingleThread(participantFilePath);
+//
+//            // Find highest ID and collect used IDs
+//            int highestId = 0;
+//            for (Participant p : organizerParticipants) {
+//                usedIds.add(p.getId());
+//                highestId = Math.max(highestId, extractNumericId(p.getId()));
+//            }
+//            for (Participant p : participantParticipants) {
+//                usedIds.add(p.getId());
+//                highestId = Math.max(highestId, extractNumericId(p.getId()));
+//            }
+//
+//            // Add organizer participants first
+//            for (Participant p : organizerParticipants) {
+//                allParticipants.add(p);
+//                emailSet.add(p.getEmail().toLowerCase().trim());
+//            }
+//
+//            // Add participant-added participants
+//            int newParticipantsAdded = 0;
+//            for (Participant p : participantParticipants) {
+//                String email = p.getEmail().toLowerCase().trim();
+//
+//                if (!emailSet.contains(email)) {
+//                    String currentId = p.getId();
+//                    String newId;
+//
+//                    // Check if current ID is valid and not already used
+//                    if (isValidParticipantId(currentId) && !usedIds.contains(currentId)) {
+//                        newId = currentId; // Keep original ID
+//                    } else {
+//                        newId = generateNewParticipantId(highestId);
+//                        highestId++;
+//                    }
+//
+//                    Participant newParticipant = createParticipantWithNewId(p, newId);
+//                    allParticipants.add(newParticipant);
+//                    emailSet.add(email);
+//                    usedIds.add(newId);
+//                    newParticipantsAdded++;
+//
+//                    System.out.println("Assigned ID " + newId + " to: " + p.getName());
+//                } else {
+//                    System.out.println("Skipping duplicate: " + p.getName() + " (" + email + ")");
+//                }
+//            }
+//
+//            // Save if output path provided
+//            if (outputPath != null && !outputPath.isEmpty()) {
+//                saveMergedParticipants(allParticipants, outputPath);
+//                System.out.println("Merged file saved to: " + outputPath);
+//            }
+//
+//            System.out.println("Smart merge completed! New participants: " + newParticipantsAdded);
+//
+//        } catch (Exception e) {
+//            System.out.println("Error in smart merge: " + e.getMessage());
+////            e.printStackTrace();
+//        }
+//
+//        return allParticipants;
+//    }
+//
+//    /**
+//     * Extract numeric part from ID
+//     */
+//    private static int extractNumericId(String id) {
+//        try {
+//            if (id.matches("[Pp]\\d+")) {
+//                return Integer.parseInt(id.substring(1));
+//            }
+//        } catch (Exception e) {
+//            // Ignore parsing errors
+//        }
+//        return 0;
+//    }
 
-            // Add organizer participants first
-            for (Participant p : organizerParticipants) {
-                allParticipants.add(p);
-                emailSet.add(p.getEmail().toLowerCase().trim());
-            }
-
-            // Add participant-added participants with new IDs
-            for (Participant p : participantParticipants) {
-                String email = p.getEmail().toLowerCase().trim();
-
-                if (!emailSet.contains(email)) {
-                    String newId = generateNewParticipantId(highestId);
-                    Participant newParticipant = createParticipantWithNewId(p, newId);
-                    allParticipants.add(newParticipant);
-                    emailSet.add(email);
-                    highestId++;
-                }
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error in quick merge: " + e.getMessage());
-        }
-
-        return allParticipants;
-    }
-
-
-    /**
-     * Alternative method that preserves original participant IDs if they follow the format
-     * and only generates new IDs for those that don't
-     */
-    public static List<Participant> smartMerge(String organizerFilePath, String participantFilePath, String outputPath) {
-        List<Participant> allParticipants = new ArrayList<>();
-        Set<String> emailSet = new HashSet<>();
-        Set<String> usedIds = new HashSet<>();
-
-        try {
-            // Load both files
-            List<Participant> organizerParticipants = FileHandler.loadParticipantsSingleThread(organizerFilePath);
-            List<Participant> participantParticipants = FileHandler.loadParticipantsSingleThread(participantFilePath);
-
-            // Find highest ID and collect used IDs
-            int highestId = 0;
-            for (Participant p : organizerParticipants) {
-                usedIds.add(p.getId());
-                highestId = Math.max(highestId, extractNumericId(p.getId()));
-            }
-            for (Participant p : participantParticipants) {
-                usedIds.add(p.getId());
-                highestId = Math.max(highestId, extractNumericId(p.getId()));
-            }
-
-            // Add organizer participants first
-            for (Participant p : organizerParticipants) {
-                allParticipants.add(p);
-                emailSet.add(p.getEmail().toLowerCase().trim());
-            }
-
-            // Add participant-added participants
-            int newParticipantsAdded = 0;
-            for (Participant p : participantParticipants) {
-                String email = p.getEmail().toLowerCase().trim();
-
-                if (!emailSet.contains(email)) {
-                    String currentId = p.getId();
-                    String newId;
-
-                    // Check if current ID is valid and not already used
-                    if (isValidParticipantId(currentId) && !usedIds.contains(currentId)) {
-                        newId = currentId; // Keep original ID
-                    } else {
-                        newId = generateNewParticipantId(highestId);
-                        highestId++;
-                    }
-
-                    Participant newParticipant = createParticipantWithNewId(p, newId);
-                    allParticipants.add(newParticipant);
-                    emailSet.add(email);
-                    usedIds.add(newId);
-                    newParticipantsAdded++;
-
-                    System.out.println("Assigned ID " + newId + " to: " + p.getName());
-                } else {
-                    System.out.println("Skipping duplicate: " + p.getName() + " (" + email + ")");
-                }
-            }
-
-            // Save if output path provided
-            if (outputPath != null && !outputPath.isEmpty()) {
-                saveMergedParticipants(allParticipants, outputPath);
-                System.out.println("Merged file saved to: " + outputPath);
-            }
-
-            System.out.println("Smart merge completed! New participants: " + newParticipantsAdded);
-
-        } catch (Exception e) {
-            System.out.println("Error in smart merge: " + e.getMessage());
-//            e.printStackTrace();
-        }
-
-        return allParticipants;
-    }
-
-    /**
-     * Extract numeric part from ID
-     */
-    private static int extractNumericId(String id) {
-        try {
-            if (id.matches("[Pp]\\d+")) {
-                return Integer.parseInt(id.substring(1));
-            }
-        } catch (Exception e) {
-            // Ignore parsing errors
-        }
-        return 0;
-    }
-
-    /**
-     * Check if ID follows the expected format
-     */
-    private static boolean isValidParticipantId(String id) {
-        return id != null && id.matches("[Pp]\\d{3}"); // P followed by 3 digits
-    }
-
+//    /**
+//     * Check if ID follows the expected format
+//     */
+//    private static boolean isValidParticipantId(String id) {
+//        return id != null && id.matches("[Pp]\\d{3}"); // P followed by 3 digits
+//    }
+//
 }

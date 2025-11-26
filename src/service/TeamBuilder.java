@@ -1,8 +1,7 @@
 package service;
 import utility.LoggerService;
-
 import model.Participant;
-
+import exception.TeamFormationException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,134 +44,152 @@ public class TeamBuilder {
         LoggerService.debug("Parameters - Participants: " + participants.size() + ", TeamSize: " + teamSize, "TeamBuilder", "formTeams");
 
         remainingParticipants.clear();
+
+        // Validate input parameters with custom exception
         if (participants == null || participants.isEmpty() || teamSize <= 0) {
-            LoggerService.warn("Invalid parameters for team formation - empty participants or invalid team size", "TeamBuilder", "formTeams");
-            return Collections.emptyList();
+            throw new TeamFormationException(
+                    "Invalid parameters for team formation: participants=" +
+                            (participants != null ? participants.size() : "null") +
+                            ", teamSize=" + teamSize,
+                    "INVALID_PARAMETERS"
+            );
         }
 
-        Map<String, List<Participant>> rolesMap = participants.stream()
-                .collect(Collectors.groupingBy(p -> safeRole(p)));
+        try {
+            Map<String, List<Participant>> rolesMap = participants.stream()
+                    .collect(Collectors.groupingBy(p -> safeRole(p)));
 
-        // Log role distribution
-        LoggerService.debug("Role distribution - Leaders: " + rolesMap.getOrDefault("leader", new ArrayList<>()).size() +
-                        ", Thinkers: " + rolesMap.getOrDefault("thinker", new ArrayList<>()).size() +
-                        ", Balanced: " + rolesMap.getOrDefault("balanced", new ArrayList<>()).size() +
-                        ", Motivators: " + rolesMap.getOrDefault("motivator", new ArrayList<>()).size(),
-                "TeamBuilder", "formTeams");
+            // Log role distribution
+            LoggerService.debug("Role distribution - Leaders: " + rolesMap.getOrDefault("leader", new ArrayList<>()).size() +
+                            ", Thinkers: " + rolesMap.getOrDefault("thinker", new ArrayList<>()).size() +
+                            ", Balanced: " + rolesMap.getOrDefault("balanced", new ArrayList<>()).size() +
+                            ", Motivators: " + rolesMap.getOrDefault("motivator", new ArrayList<>()).size(),
+                    "TeamBuilder", "formTeams");
 
-        // Initial setup of team leaders and pools (sequential)
-        List<Participant> leaders = new ArrayList<>(rolesMap.getOrDefault("leader", new ArrayList<>()));
-        List<Participant> thinkers = new ArrayList<>(rolesMap.getOrDefault("thinker", new ArrayList<>()));
-        List<Participant> balanced = new ArrayList<>(rolesMap.getOrDefault("balanced", new ArrayList<>()));
-        List<Participant> motivators = new ArrayList<>(rolesMap.getOrDefault("motivator", new ArrayList<>()));
+            // Initial setup of team leaders and pools (sequential)
+            List<Participant> leaders = new ArrayList<>(rolesMap.getOrDefault("leader", new ArrayList<>()));
+            List<Participant> thinkers = new ArrayList<>(rolesMap.getOrDefault("thinker", new ArrayList<>()));
+            List<Participant> balanced = new ArrayList<>(rolesMap.getOrDefault("balanced", new ArrayList<>()));
+            List<Participant> motivators = new ArrayList<>(rolesMap.getOrDefault("motivator", new ArrayList<>()));
 
-        List<Participant> remainingOthers = new ArrayList<>();
-        remainingOthers.addAll(balanced);
-        remainingOthers.addAll(motivators);
-        Collections.shuffle(remainingOthers, new Random());
+            List<Participant> remainingOthers = new ArrayList<>();
+            remainingOthers.addAll(balanced);
+            remainingOthers.addAll(motivators);
+            Collections.shuffle(remainingOthers, new Random());
 
-        int possibleTeams = Math.min(leaders.size(), participants.size() / teamSize);
-        if (possibleTeams == 0) {
-            LoggerService.warn("No possible teams formed - insufficient leaders or participants", "TeamBuilder", "formTeams");
-            remainingParticipants.addAll(participants);
-            return Collections.emptyList();
-        }
-
-        LoggerService.info("Possible teams to form: " + possibleTeams, "TeamBuilder", "formTeams");
-
-        double overallAvg = participants.stream()
-                .mapToInt(TeamBuilder::safeSkill)
-                .average()
-                .orElse(0);
-
-        LoggerService.debug("Overall average skill level: " + String.format("%.2f", overallAvg), "TeamBuilder", "formTeams");
-
-        List<TeamState> teamStates = new ArrayList<>();
-        Collections.shuffle(leaders, new Random());
-        for (int i = 0; i < possibleTeams; i++) {
-            TeamState state = new TeamState(i);
-            state.addMember(leaders.get(i));
-            teamStates.add(state);
-        }
-        if (leaders.size() > possibleTeams) {
-            LoggerService.debug("Excess leaders added to remaining: " + (leaders.size() - possibleTeams), "TeamBuilder", "formTeams");
-            remainingParticipants.addAll(leaders.subList(possibleTeams, leaders.size()));
-        }
-
-        // Assign one thinker per team (sequential)
-        Collections.shuffle(thinkers, new Random());
-        Iterator<Participant> thinkerIterator = thinkers.iterator();
-        int thinkersAssigned = 0;
-        for (TeamState team : teamStates) {
-            if (!thinkerIterator.hasNext()) break;
-            Participant thinker = thinkerIterator.next();
-            if (team.members.size() < teamSize && countGame(team.members, thinker.getPreferredGame()) < GAME_CAP) {
-                team.addMember(thinker);
-                thinkerIterator.remove();
-                thinkersAssigned++;
-            } else {
-                remainingOthers.add(0, thinker);
-                thinkerIterator.remove();
+            int possibleTeams = Math.min(leaders.size(), participants.size() / teamSize);
+            if (possibleTeams == 0) {
+                LoggerService.warn("No possible teams formed - insufficient leaders or participants", "TeamBuilder", "formTeams");
+                remainingParticipants.addAll(participants);
+                return Collections.emptyList();
             }
-        }
-        remainingOthers.addAll(thinkers); // Add any unassigned thinkers back to the pool
 
-        LoggerService.debug("Thinkers assigned to teams: " + thinkersAssigned, "TeamBuilder", "formTeams");
-        LoggerService.info("Starting multi-threaded team assignment with " + remainingOthers.size() + " participants", "TeamBuilder", "formTeams");
+            LoggerService.info("Possible teams to form: " + possibleTeams, "TeamBuilder", "formTeams");
 
-        // --- Multi-threaded Assignment using Parallel Stream ---
+            double overallAvg = participants.stream()
+                    .mapToInt(TeamBuilder::safeSkill)
+                    .average()
+                    .orElse(0);
 
-        // This stream processes the assignment of 'remainingOthers' concurrently
-        // The synchronized block prevents race conditions when modifying shared TeamState objects.
-        remainingOthers.parallelStream().forEach(p -> {
-            TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
+            LoggerService.debug("Overall average skill level: " + String.format("%.2f", overallAvg), "TeamBuilder", "formTeams");
 
-            if (bestTeam != null) {
-                // Synchronize access to the specific team object being modified
-                synchronized (bestTeam) {
-                    // Double-check condition inside the lock just in case another thread filled it
-                    if (bestTeam.members.size() < teamSize) {
-                        bestTeam.addMember(p);
-                        LoggerService.debug("Assigned participant " + p.getId() + " to team " + bestTeam.teamId, "TeamBuilder", "formTeams");
-                    } else {
-                        // If blocked and team is full, add to remaining list (needs synchronization)
-                        remainingParticipants.add(p);
-                        LoggerService.debug("Team " + bestTeam.teamId + " full, participant " + p.getId() + " added to remaining", "TeamBuilder", "formTeams");
-                    }
+            List<TeamState> teamStates = new ArrayList<>();
+            Collections.shuffle(leaders, new Random());
+            for (int i = 0; i < possibleTeams; i++) {
+                TeamState state = new TeamState(i);
+                state.addMember(leaders.get(i));
+                teamStates.add(state);
+            }
+            if (leaders.size() > possibleTeams) {
+                LoggerService.debug("Excess leaders added to remaining: " + (leaders.size() - possibleTeams), "TeamBuilder", "formTeams");
+                remainingParticipants.addAll(leaders.subList(possibleTeams, leaders.size()));
+            }
+
+            // Assign one thinker per team (sequential)
+            Collections.shuffle(thinkers, new Random());
+            Iterator<Participant> thinkerIterator = thinkers.iterator();
+            int thinkersAssigned = 0;
+            for (TeamState team : teamStates) {
+                if (!thinkerIterator.hasNext()) break;
+                Participant thinker = thinkerIterator.next();
+                if (team.members.size() < teamSize && countGame(team.members, thinker.getPreferredGame()) < GAME_CAP) {
+                    team.addMember(thinker);
+                    thinkerIterator.remove();
+                    thinkersAssigned++;
+                } else {
+                    remainingOthers.add(0, thinker);
+                    thinkerIterator.remove();
                 }
-            } else {
-                // Synchronize access to the static remainingParticipants list
-                remainingParticipants.add(p);
-                LoggerService.debug("No suitable team found for participant " + p.getId() + ", added to remaining", "TeamBuilder", "formTeams");
             }
-        });
+            remainingOthers.addAll(thinkers); // Add any unassigned thinkers back to the pool
 
-        // --- End Multi-threaded Assignment ---
+            LoggerService.debug("Thinkers assigned to teams: " + thinkersAssigned, "TeamBuilder", "formTeams");
+            LoggerService.info("Starting multi-threaded team assignment with " + remainingOthers.size() + " participants", "TeamBuilder", "formTeams");
 
-        List<List<Participant>> finalTeams = new ArrayList<>();
-        int completeTeams = 0;
-        int incompleteParticipants = 0;
+            // --- Multi-threaded Assignment using Parallel Stream ---
 
-        // Collect results sequentially
-        for (TeamState team : teamStates) {
-            if (team.members.size() == teamSize) {
-                finalTeams.add(new ArrayList<>(team.members));
-                completeTeams++;
-                LoggerService.debug("Team " + team.teamId + " completed with " + team.members.size() + " members", "TeamBuilder", "formTeams");
-            } else {
-                remainingParticipants.addAll(team.members);
-                incompleteParticipants += team.members.size();
-                LoggerService.debug("Team " + team.teamId + " incomplete with " + team.members.size() + " members, added to remaining", "TeamBuilder", "formTeams");
+            // This stream processes the assignment of 'remainingOthers' concurrently
+            // The synchronized block prevents race conditions when modifying shared TeamState objects.
+            remainingOthers.parallelStream().forEach(p -> {
+                TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
+
+                if (bestTeam != null) {
+                    // Synchronize access to the specific team object being modified
+                    synchronized (bestTeam) {
+                        // Double-check condition inside the lock just in case another thread filled it
+                        if (bestTeam.members.size() < teamSize) {
+                            bestTeam.addMember(p);
+                            LoggerService.debug("Assigned participant " + p.getId() + " to team " + bestTeam.teamId, "TeamBuilder", "formTeams");
+                        } else {
+                            // If blocked and team is full, add to remaining list (needs synchronization)
+                            remainingParticipants.add(p);
+                            LoggerService.debug("Team " + bestTeam.teamId + " full, participant " + p.getId() + " added to remaining", "TeamBuilder", "formTeams");
+                        }
+                    }
+                } else {
+                    // Synchronize access to the static remainingParticipants list
+                    remainingParticipants.add(p);
+                    LoggerService.debug("No suitable team found for participant " + p.getId() + ", added to remaining", "TeamBuilder", "formTeams");
+                }
+            });
+
+            // --- End Multi-threaded Assignment ---
+
+            List<List<Participant>> finalTeams = new ArrayList<>();
+            int completeTeams = 0;
+            int incompleteParticipants = 0;
+
+            // Collect results sequentially
+            for (TeamState team : teamStates) {
+                if (team.members.size() == teamSize) {
+                    finalTeams.add(new ArrayList<>(team.members));
+                    completeTeams++;
+                    LoggerService.debug("Team " + team.teamId + " completed with " + team.members.size() + " members", "TeamBuilder", "formTeams");
+                } else {
+                    remainingParticipants.addAll(team.members);
+                    incompleteParticipants += team.members.size();
+                    LoggerService.debug("Team " + team.teamId + " incomplete with " + team.members.size() + " members, added to remaining", "TeamBuilder", "formTeams");
+                }
             }
+
+            LoggerService.logTeamFormation("COMPLETED", finalTeams.size(), participants.size());
+            LoggerService.info("Team formation completed - Teams: " + finalTeams.size() +
+                            ", Complete teams: " + completeTeams +
+                            ", Remaining participants: " + remainingParticipants.size(),
+                    "TeamBuilder", "formTeams");
+
+            return finalTeams;
+
+        } catch (Exception e) {
+            if (e instanceof TeamFormationException) {
+                throw e; // Re-throw our custom exception
+            }
+            throw new TeamFormationException(
+                    "Unexpected error during team formation: " + e.getMessage(),
+                    "FORMATION_ERROR",
+                    e
+            );
         }
-
-        LoggerService.logTeamFormation("COMPLETED", finalTeams.size(), participants.size());
-        LoggerService.info("Team formation completed - Teams: " + finalTeams.size() +
-                        ", Complete teams: " + completeTeams +
-                        ", Remaining participants: " + remainingParticipants.size(),
-                "TeamBuilder", "formTeams");
-
-        return finalTeams;
     }
 
     // formLeftoverTeams remains sequential for simplicity, but could also be updated
@@ -187,65 +204,74 @@ public class TeamBuilder {
 
         LoggerService.debug("Leftover pool size: " + pool.size() + ", Target team size: " + teamSize, "TeamBuilder", "formLeftoverTeams");
 
-        double poolAvgSkill = pool.stream()
-                .mapToInt(TeamBuilder::safeSkill)
-                .average()
-                .orElse(0);
+        try {
+            double poolAvgSkill = pool.stream()
+                    .mapToInt(TeamBuilder::safeSkill)
+                    .average()
+                    .orElse(0);
 
-        int maxNewTeams = pool.size() / teamSize;
-        List<TeamState> newTeams = new ArrayList<>();
-        pool.sort(Comparator.comparingInt(TeamBuilder::safeSkill).reversed());
-        List<Participant> tempPool = new ArrayList<>(pool);
-        pool.clear();
+            int maxNewTeams = pool.size() / teamSize;
+            List<TeamState> newTeams = new ArrayList<>();
+            pool.sort(Comparator.comparingInt(TeamBuilder::safeSkill).reversed());
+            List<Participant> tempPool = new ArrayList<>(pool);
+            pool.clear();
 
-        LoggerService.debug("Creating " + maxNewTeams + " new teams from leftovers", "TeamBuilder", "formLeftoverTeams");
+            LoggerService.debug("Creating " + maxNewTeams + " new teams from leftovers", "TeamBuilder", "formLeftoverTeams");
 
-        for (int i = 0; i < maxNewTeams; i++) {
-            if (tempPool.isEmpty()) break;
-            TeamState state = new TeamState(newTeams.size() + 100);
-            state.addMember(tempPool.remove(0));
-            newTeams.add(state);
-            LoggerService.debug("Created leftover team " + state.teamId + " with initial member", "TeamBuilder", "formLeftoverTeams");
-        }
-        pool.addAll(tempPool);
-        Collections.shuffle(pool, new Random());
-
-        List<Participant> unassigned = new ArrayList<>();
-        int assignedCount = 0;
-
-        // Optional: Could use parallelStream here, but requires synchronization on newTeams elements
-        for (Participant p : pool) {
-            TeamState bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
-            if (bestTeam != null) {
-                bestTeam.addMember(p);
-                assignedCount++;
-                LoggerService.debug("Assigned leftover participant " + p.getId() + " to team " + bestTeam.teamId, "TeamBuilder", "formLeftoverTeams");
-            } else {
-                unassigned.add(p);
-                LoggerService.debug("No suitable leftover team for participant " + p.getId(), "TeamBuilder", "formLeftoverTeams");
+            for (int i = 0; i < maxNewTeams; i++) {
+                if (tempPool.isEmpty()) break;
+                TeamState state = new TeamState(newTeams.size() + 100);
+                state.addMember(tempPool.remove(0));
+                newTeams.add(state);
+                LoggerService.debug("Created leftover team " + state.teamId + " with initial member", "TeamBuilder", "formLeftoverTeams");
             }
-        }
+            pool.addAll(tempPool);
+            Collections.shuffle(pool, new Random());
 
-        List<List<Participant>> finalNewTeams = new ArrayList<>();
-        remainingParticipants.clear();
-        int leftoverCompleteTeams = 0;
+            List<Participant> unassigned = new ArrayList<>();
+            int assignedCount = 0;
 
-        for (TeamState team : newTeams) {
-            if (team.members.size() == teamSize) {
-                finalNewTeams.add(new ArrayList<>(team.members));
-                leftoverCompleteTeams++;
-            } else {
-                remainingParticipants.addAll(team.members);
+            // Optional: Could use parallelStream here, but requires synchronization on newTeams elements
+            for (Participant p : pool) {
+                TeamState bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
+                if (bestTeam != null) {
+                    bestTeam.addMember(p);
+                    assignedCount++;
+                    LoggerService.debug("Assigned leftover participant " + p.getId() + " to team " + bestTeam.teamId, "TeamBuilder", "formLeftoverTeams");
+                } else {
+                    unassigned.add(p);
+                    LoggerService.debug("No suitable leftover team for participant " + p.getId(), "TeamBuilder", "formLeftoverTeams");
+                }
             }
+
+            List<List<Participant>> finalNewTeams = new ArrayList<>();
+            remainingParticipants.clear();
+            int leftoverCompleteTeams = 0;
+
+            for (TeamState team : newTeams) {
+                if (team.members.size() == teamSize) {
+                    finalNewTeams.add(new ArrayList<>(team.members));
+                    leftoverCompleteTeams++;
+                } else {
+                    remainingParticipants.addAll(team.members);
+                }
+            }
+            remainingParticipants.addAll(unassigned);
+
+            LoggerService.info("Leftover team formation completed - New teams: " + finalNewTeams.size() +
+                            ", Complete leftover teams: " + leftoverCompleteTeams +
+                            ", Still unassigned: " + remainingParticipants.size(),
+                    "TeamBuilder", "formLeftoverTeams");
+
+            return finalNewTeams;
+
+        } catch (Exception e) {
+            throw new TeamFormationException(
+                    "Error during leftover team formation: " + e.getMessage(),
+                    "LEFTOVER_FORMATION_ERROR",
+                    e
+            );
         }
-        remainingParticipants.addAll(unassigned);
-
-        LoggerService.info("Leftover team formation completed - New teams: " + finalNewTeams.size() +
-                        ", Complete leftover teams: " + leftoverCompleteTeams +
-                        ", Still unassigned: " + remainingParticipants.size(),
-                "TeamBuilder", "formLeftoverTeams");
-
-        return finalNewTeams;
     }
 
     private static TeamState findBestTeamForParticipant(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {

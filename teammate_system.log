@@ -1,0 +1,17 @@
+[2025-11-26 08:37:51] [INFO] [MinCLI.main] Application started
+[2025-11-26 08:38:06] [INFO] [MainCLI.main] Participant menu accessed
+[2025-11-26 08:38:09] [INFO] [MainCLI.main] Add new participant option selected
+[2025-11-26 08:38:45] [INFO] [FileHandler.logFileOperation] FILE ACCESS: C:\Users\DELL\Desktop\participant_data.csv - Existing CSV file accessed
+[2025-11-26 08:38:45] [INFO] [MainCLI.main] Starting participant creation process
+[2025-11-26 08:40:23] [INFO] [FileHandler.logFileOperation] FILE SAVE: C:\Users\DELL\Desktop\participant_data.csv - Saved participant: P001sidjiuhasygm
+[2025-11-26 08:40:23] [INFO] [ParticipantService.logParticipantAction] PARTICIPANT P001sidjiuhasygm: CREATED - Name: P001, Game: fifa, Role: COORDINATOR
+[2025-11-26 08:40:23] [INFO] [MainCLI.main] Participant added successfully
+[2025-11-26 16:27:27] [INFO] [MinCLI.main] Application started
+[2025-11-26 16:27:30] [INFO] [MainCLI.main] Participant menu accessed
+[2025-11-26 16:27:36] [INFO] [MainCLI.main] Add new participant option selected
+[2025-11-26 16:27:42] [INFO] [FileHandler.logFileOperation] FILE ACCESS: C:\Users\DELL\Desktop\participant_data.csv - Existing CSV file accessed
+[2025-11-26 16:27:42] [INFO] [MainCLI.main] Starting participant creation process
+[2025-11-26 16:29:32] [INFO] [FileHandler.logFileOperation] FILE SAVE: C:\Users\DELL\Desktop\participant_data.csv - Saved participant: P200
+[2025-11-26 16:29:32] [INFO] [ParticipantService.logParticipantAction] PARTICIPANT P200: CREATED - Name: SSSS, Game: Chess, Role: COORDINATOR
+[2025-11-26 16:29:32] [INFO] [MainCLI.main] Participant added successfully
+[2025-11-28 04:43:42] [INFO] Application started

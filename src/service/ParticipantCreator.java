@@ -8,6 +8,8 @@ import utility.LoggerService;
 import java.util.*;
 import java.io.*;
 
+import static service.TeamBuilder.logger;
+
 public class ParticipantCreator {
 
     private static final RoleType[] ALLOWED_ROLES = {
@@ -100,9 +102,10 @@ public class ParticipantCreator {
             FileHandler.saveParticipant(newCSVPath, p);
 
             // ---------------- SINGLE LOGGER CALL ----------------
-            LoggerService.logParticipantAction("CREATED", id,
-                    "Name: " + name + ", Game: " + preferredGame + ", Role: " + preferredRole);
-
+            logger.info("Participant CREATED - ID: " + id +
+                    ", Name: " + name +
+                    ", Game: " + preferredGame +
+                    ", Role: " + preferredRole);
             System.out.println("\nParticipant added successfully!");
             System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")");
             System.out.println("\nParticipant Details:");

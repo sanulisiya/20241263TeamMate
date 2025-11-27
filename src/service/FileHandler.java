@@ -16,6 +16,9 @@ import java.util.List;
 
 public class FileHandler {
 
+    // Logger instance
+    private static final LoggerService logger = LoggerService.getInstance();
+
     // ---------------- NORMAL SINGLE-THREADED LOADER ----------------
 
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
@@ -58,7 +61,7 @@ public class FileHandler {
             );
         }
 
-        LoggerService.logFileOperation("LOAD", filePath, "Loaded " + participants.size() + " participants");
+        logger.info("Loaded " + participants.size() + " participants from: " + filePath);
         return participants;
     }
 
@@ -162,7 +165,7 @@ public class FileHandler {
         try (FileWriter writer = new FileWriter(fileName)) {
             // Write CSV header
             writer.append("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType,PersonalityScore\n");
-            System.out.println("CSV file created successfully: " + fileName);
+            logger.info("CSV file created successfully: " + fileName);
         } catch (IOException e) {
             throw new FileOperationException(
                     "Error creating CSV file: " + e.getMessage(),
@@ -192,7 +195,7 @@ public class FileHandler {
 
             String line = String.join(",", p.getId(), p.getName(), p.getEmail(), p.getPreferredGame(), String.valueOf(p.getSkillLevel()), p.getPreferredRole().name(), String.valueOf(p.getPersonalityScore()), p.getPersonalityType().name(), p.getTeamNumber() != null ? p.getTeamNumber() : "");
             writer.write(line + "\n");
-            System.out.println("Participant saved to: " + filePath);
+            logger.info("Participant saved to: " + filePath + " - ID: " + p.getId());
 
         } catch (IOException e) {
             throw new FileOperationException(
@@ -207,11 +210,10 @@ public class FileHandler {
                 try {
                     writer.close();
                 } catch (IOException e) {
-                    System.out.println("Error closing file: " + e.getMessage());
+                    logger.error("Error closing file: " + filePath, e);
                 }
             }
         }
-        LoggerService.logFileOperation("SAVE", filePath, "Saved participant: " + p.getId());
     }
 
     // ---------------- LOAD TEAMS FROM OUTPUT FILE ----------------
@@ -244,6 +246,7 @@ public class FileHandler {
             );
         }
 
+        logger.info("Loaded " + teamParticipants.size() + " team participants from: " + filePath);
         return teamParticipants;
     }
 
@@ -305,7 +308,7 @@ public class FileHandler {
                 FileWriter writer = new FileWriter(file);
                 writer.write("ID,Name,Email,Game,Skill,Role,PersonalityScore,PersonalityType\n");
                 writer.close();
-                System.out.println("CSV created at: " + file.getAbsolutePath());
+                logger.info("CSV created at: " + file.getAbsolutePath());
             }
 
         } catch (Exception e) {
@@ -318,6 +321,8 @@ public class FileHandler {
         }
     }
 
+    // Uncomment and update this method if you need file chooser functionality
+    /*
     public static String chooseLocationAndCreateCSV() {
         try {
             JFileChooser chooser = new JFileChooser();
@@ -336,6 +341,7 @@ public class FileHandler {
                 writer.write("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType\n");
                 writer.close();
 
+                logger.info("CSV file created via file chooser: " + filePath);
                 return filePath;  // return path of new CSV file
             }
 
@@ -350,4 +356,5 @@ public class FileHandler {
 
         return null;
     }
+    */
 }

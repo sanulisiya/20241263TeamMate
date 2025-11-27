@@ -112,13 +112,5 @@ public class ParticipantValidator {
                 validatePersonalityType(personalityType);
     }
 
-    // Get allowed games list
-    public static List<String> getAllowedGames() {
-        return ALLOWED_GAMES;
-    }
 
-    // Get allowed personalities list
-    public static List<String> getAllowedPersonalities() {
-        return ALLOWED_PERSONALITIES;
-    }
 }

@@ -186,7 +186,7 @@ public class OrganizerCLI {
             TeamFileHandler.saveTeamsToCSV(teams, userPath);
             teamsOutputPath = userPath;
             logger.info("Teams saved successfully to: " + teamsOutputPath);
-            System.out.println("\n✔ Teams successfully saved!");
+            System.out.println("\n Teams successfully saved!");
             System.out.println("Saved to: " + teamsOutputPath);
             System.out.println("Total formatted teams saved: " + teams.size());
             System.out.println("Participants can now view their assigned teams in the participant menu.");

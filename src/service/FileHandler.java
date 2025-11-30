@@ -7,10 +7,7 @@ import utility.LoggerService;
 import exception.FileOperationException;
 import exception.ParticipantValidationException;
 
-import javax.swing.*;
 import java.io.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,69 +16,181 @@ public class FileHandler {
     // Logger instance
     private static final LoggerService logger = LoggerService.getInstance();
 
-    // ---------------- NORMAL SINGLE-THREADED LOADER ----------------
+    // ---------------- SINGLE-THREADED LOADER ----------------
 
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
         List<Participant> participants = new ArrayList<>();
 
+        // Validate file existence and readability first
+        validateFile(filePath);
+
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
+            int lineNumber = 0;
+            int successCount = 0;
+            int errorCount = 0;
 
             // Check if file has header and skip it
             if (br.ready()) {
                 String firstLine = br.readLine();
-                // Only skip if it's actually a header (contains typical header keywords)
-                if (firstLine != null && (firstLine.toLowerCase().contains("id") || firstLine.toLowerCase().contains("name") || firstLine.toLowerCase().contains("email"))) {
-                    // This is a header, we've already read it, so continue
-                } else {
-                    // This might be data, so parse it
-                    Participant p = parseParticipant(firstLine);
-                    if (p != null) participants.add(p);
+                lineNumber++;
+
+                if (firstLine != null) {
+                    if (isHeaderLine(firstLine)) {
+                        logger.debug("Skipping header line: " + firstLine);
+                    } else {
+                        // This might be data, so parse it
+                        try {
+                            Participant p = parseParticipant(firstLine, lineNumber);
+                            if (p != null) {
+                                participants.add(p);
+                                successCount++;
+                            }
+                        } catch (Exception e) {
+                            errorCount++;
+                            logger.warn("Failed to parse line " + lineNumber + ": " + firstLine + " - " + e.getMessage());
+                        }
+                    }
                 }
             }
 
             while ((line = br.readLine()) != null) {
-                Participant p = parseParticipant(line);
-                if (p != null) participants.add(p);
+                lineNumber++;
+                try {
+                    Participant p = parseParticipant(line, lineNumber);
+                    if (p != null) {
+                        participants.add(p);
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    errorCount++;
+                    logger.warn("Failed to parse line " + lineNumber + ": " + line + " - " + e.getMessage());
+                    // Continue processing other lines instead of failing completely
+                }
             }
 
-        } catch (IOException e) {
+            logger.info("Loaded " + successCount + " participants from: " + filePath +
+                    " (Failed: " + errorCount + " lines)");
+
+            if (successCount == 0 && errorCount > 0) {
+                throw new FileOperationException(
+                        "No valid participants found in file. Check file format.",
+                        filePath,
+                        "READ"
+                );
+            }
+
+        } catch (FileNotFoundException e) {
             throw new FileOperationException(
-                    "Error reading participant file: " + e.getMessage(),
+                    "File not found: " + filePath,
                     filePath,
                     "READ",
                     e
             );
+        } catch (IOException e) {
+            throw new FileOperationException(
+                    "Error reading file: " + e.getMessage(),
+                    filePath,
+                    "READ",
+                    e
+            );
+        } catch (FileOperationException e) {
+            throw e; // Re-throw our custom exceptions
         } catch (Exception e) {
             throw new FileOperationException(
-                    "Unexpected error while loading participants",
+                    "Unexpected error while loading participants: " + e.getMessage(),
                     filePath,
                     "READ",
                     e
             );
         }
 
-        logger.info("Loaded " + participants.size() + " participants from: " + filePath);
         return participants;
     }
 
-    // ---------------- PARSE PARTICIPANT (FOR TEAM OUTPUT FILE) ----------------
+    // ---------------- FILE VALIDATION ----------------
 
-    private static Participant parseParticipant(String line) {
+    private static void validateFile(String filePath) {
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            throw new FileOperationException(
+                    "File does not exist: " + filePath,
+                    filePath,
+                    "READ"
+            );
+        }
+
+        if (!file.isFile()) {
+            throw new FileOperationException(
+                    "Path is not a file: " + filePath,
+                    filePath,
+                    "READ"
+            );
+        }
+
+        if (!file.canRead()) {
+            throw new FileOperationException(
+                    "Cannot read file (permission denied): " + filePath,
+                    filePath,
+                    "READ"
+            );
+        }
+
+        if (file.length() == 0) {
+            throw new FileOperationException(
+                    "File is empty: " + filePath,
+                    filePath,
+                    "READ"
+            );
+        }
+
+        logger.debug("File validation passed: " + filePath);
+    }
+
+    private static boolean isHeaderLine(String line) {
+        if (line == null || line.trim().isEmpty()) {
+            return false;
+        }
+
+        String lowerLine = line.toLowerCase();
+        return lowerLine.contains("id") ||
+                lowerLine.contains("name") ||
+                lowerLine.contains("email") ||
+                lowerLine.contains("game") ||
+                lowerLine.contains("skill") ||
+                lowerLine.contains("role") ||
+                lowerLine.contains("personality");
+    }
+
+    // ---------------- PARSE PARTICIPANT (IMPROVED ERROR HANDLING) ----------------
+
+    private static Participant parseParticipant(String line, int lineNumber) {
+        if (line == null || line.trim().isEmpty()) {
+            return null;
+        }
+
         String trimmedLine = line.trim();
 
-        // Ignore empty lines, separator lines, and summary lines
-        if (trimmedLine.isEmpty() || trimmedLine.startsWith("----") || trimmedLine.startsWith("Summary") || trimmedLine.startsWith("Team Number")) {
+        // Ignore separator lines and summary lines
+        if (trimmedLine.startsWith("----") || trimmedLine.startsWith("Summary") ||
+                trimmedLine.startsWith("===") || trimmedLine.startsWith("***")) {
             return null;
         }
 
         String[] data = trimmedLine.split(",");
 
-        try {
-            // Handle different CSV formats:
-            // Format 1: Main participants file (ID,Name,Email,Game,Skill,Role,Score,PersonalityType)
-            // Format 2: Team output file (TeamNumber,ID,Name,Email,Game,Skill,Role,Score,PersonalityType)
+        // Clean up each field
+        for (int i = 0; i < data.length; i++) {
+            data[i] = data[i].trim();
+            // Remove quotes if present
+            if (data[i].startsWith("\"") && data[i].endsWith("\"")) {
+                data[i] = data[i].substring(1, data[i].length() - 1);
+            }
+        }
 
+        try {
+            // Handle different CSV formats
             if (data.length >= 8) {
                 String id, name, email, game, teamNumber = "";
                 int skillLevel, personalityScore;
@@ -89,30 +198,42 @@ public class FileHandler {
                 PersonalityType personalityType;
 
                 // Determine the format based on first column
-                if (data[0].trim().matches("\\d+")) {
-                    // This is team output format: TeamNumber,ID,Name,Email,Game,Skill,Role,Score,PersonalityType
-                    teamNumber = data[0].trim();
-                    id = data[1].trim();
-                    name = data[2].trim();
-                    email = data[3].trim();
-                    game = data[4].trim();
-                    skillLevel = Integer.parseInt(data[5].trim());
-                    preferredRole = RoleType.valueOf(data[6].trim().toUpperCase());
-                    personalityScore = Integer.parseInt(data[7].trim());
-                    personalityType = PersonalityType.fromString(data[8].trim());
+                if (data[0].matches("\\d+")) {
+                    // Team output format: TeamNumber,ID,Name,Email,Game,Skill,Role,Score,PersonalityType
+                    if (data.length < 9) {
+                        throw new ParticipantValidationException(
+                                "Team format requires 9 columns, found: " + data.length,
+                                "CSV_ROW",
+                                trimmedLine
+                        );
+                    }
+                    teamNumber = data[0];
+                    id = data[1];
+                    name = data[2];
+                    email = data[3];
+                    game = data[4];
+                    skillLevel = parseIntegerSafe(data[5], "SkillLevel", lineNumber);
+                    preferredRole = parseRoleTypeSafe(data[6], lineNumber);
+                    personalityScore = parseIntegerSafe(data[7], "PersonalityScore", lineNumber);
+                    personalityType = parsePersonalityTypeSafe(data[8], lineNumber);
                 } else {
-                    // This is main participants format: ID,Name,Email,Game,Skill,Role,Score,PersonalityType
-                    id = data[0].trim();
-                    name = data[1].trim();
-                    email = data[2].trim();
-                    game = data[3].trim();
-                    skillLevel = Integer.parseInt(data[4].trim());
-                    preferredRole = RoleType.valueOf(data[5].trim().toUpperCase());
-                    personalityScore = Integer.parseInt(data[6].trim());
-                    personalityType = PersonalityType.fromString(data[7].trim());
+                    // Main participants format: ID,Name,Email,Game,Skill,Role,Score,PersonalityType
+                    id = data[0];
+                    name = data[1];
+                    email = data[2];
+                    game = data[3];
+                    skillLevel = parseIntegerSafe(data[4], "SkillLevel", lineNumber);
+                    preferredRole = parseRoleTypeSafe(data[5], lineNumber);
+                    personalityScore = parseIntegerSafe(data[6], "PersonalityScore", lineNumber);
+                    personalityType = parsePersonalityTypeSafe(data[7], lineNumber);
                 }
 
-                // Create participant using the correct constructor
+                // Validate required fields
+                validateRequiredField(id, "ID", lineNumber);
+                validateRequiredField(name, "Name", lineNumber);
+                validateRequiredField(email, "Email", lineNumber);
+
+                // Create participant
                 Participant participant = new Participant(id, name, email, game, skillLevel, preferredRole, personalityScore, personalityType);
 
                 // Set team number if available
@@ -121,82 +242,121 @@ public class FileHandler {
                 }
 
                 return participant;
+            } else {
+                throw new ParticipantValidationException(
+                        "Not enough columns. Expected at least 8, found: " + data.length,
+                        "CSV_ROW",
+                        trimmedLine
+                );
             }
 
-        } catch (NumberFormatException e) {
+        } catch (ParticipantValidationException e) {
+            // Re-throw our custom exceptions with line number context
             throw new ParticipantValidationException(
-                    "Invalid number format in CSV row: " + trimmedLine,
-                    "CSV_ROW",
-                    trimmedLine,
-                    e
-            );
-        } catch (IllegalArgumentException e) {
-            throw new ParticipantValidationException(
-                    "Invalid enum value in CSV row: " + trimmedLine,
-                    "CSV_ROW",
-                    trimmedLine,
+                    "Line " + lineNumber + ": " + e.getMessage(),
+                    e.getFieldName(),
+                    e.getInvalidValue(),
                     e
             );
         } catch (Exception e) {
             throw new ParticipantValidationException(
-                    "Invalid CSV row format: " + trimmedLine,
+                    "Line " + lineNumber + ": Unexpected parsing error - " + e.getMessage(),
                     "CSV_ROW",
                     trimmedLine,
                     e
             );
         }
-
-        throw new ParticipantValidationException(
-                "Not enough columns in CSV row: " + trimmedLine,
-                "CSV_ROW",
-                trimmedLine
-        );
     }
 
-    public static String createNewCSV() {
-        // Get Desktop path dynamically
-        String desktopPath = System.getProperty("user.home") + "/Desktop";
+    // ---------------- SAFE PARSING METHODS ----------------
 
-        // Generate filename with timestamp
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-        String timestamp = dtf.format(LocalDateTime.now());
-        String fileName = "participants_" + timestamp + ".csv";
-
-        try (FileWriter writer = new FileWriter(fileName)) {
-            // Write CSV header
-            writer.append("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType,PersonalityScore\n");
-            logger.info("CSV file created successfully: " + fileName);
-        } catch (IOException e) {
-            throw new FileOperationException(
-                    "Error creating CSV file: " + e.getMessage(),
-                    fileName,
-                    "CREATE",
-                    e
+    private static int parseIntegerSafe(String value, String fieldName, int lineNumber) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new ParticipantValidationException(
+                    fieldName + " cannot be empty",
+                    fieldName,
+                    value
             );
         }
 
-        return fileName; // Return the path of the newly created CSV
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new ParticipantValidationException(
+                    "Invalid number format for " + fieldName + ": " + value,
+                    fieldName,
+                    value,
+                    e
+            );
+        }
     }
 
-    public static void main(String[] args) {
-        // Create CSV file
-        String newCSV = createNewCSV();
+    private static RoleType parseRoleTypeSafe(String value, int lineNumber) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new ParticipantValidationException(
+                    "Role cannot be empty",
+                    "Role",
+                    value
+            );
+        }
 
-        // You can now pass this file path to your FileHandler to save participants
-        System.out.println("You can now save participants to: " + newCSV);
+        try {
+            return RoleType.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ParticipantValidationException(
+                    "Invalid role: " + value + ". Valid roles: STRATEGIST, ATTACKER, DEFENDER, SUPPORTER, COORDINATOR",
+                    "Role",
+                    value,
+                    e
+            );
+        }
     }
 
-    // ---------------- SAVE PARTICIPANT ----------------
+    private static PersonalityType parsePersonalityTypeSafe(String value, int lineNumber) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new ParticipantValidationException(
+                    "PersonalityType cannot be empty",
+                    "PersonalityType",
+                    value
+            );
+        }
+
+        try {
+            return PersonalityType.fromString(value);
+        } catch (Exception e) {
+            throw new ParticipantValidationException(
+                    "Invalid personality type: " + value + ". Valid types: LEADER, THINKER, BALANCED, MOTIVATOR",
+                    "PersonalityType",
+                    value,
+                    e
+            );
+        }
+    }
+
+    private static void validateRequiredField(String value, String fieldName, int lineNumber) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new ParticipantValidationException(
+                    fieldName + " cannot be empty",
+                    fieldName,
+                    value
+            );
+        }
+    }
+
 
     public static void saveParticipant(String filePath, Participant p) {
-        FileWriter writer = null;
-        try {
-            writer = new FileWriter(filePath, true); // true for append mode
+        // Ensure directory exists
+        ensureCSVExists(filePath);
 
-            String line = String.join(",", p.getId(), p.getName(), p.getEmail(), p.getPreferredGame(), String.valueOf(p.getSkillLevel()), p.getPreferredRole().name(), String.valueOf(p.getPersonalityScore()), p.getPersonalityType().name(), p.getTeamNumber() != null ? p.getTeamNumber() : "");
+        try (FileWriter writer = new FileWriter(filePath, true)) {
+            String line = String.join(",",
+                    p.getId(), p.getName(), p.getEmail(), p.getPreferredGame(),
+                    String.valueOf(p.getSkillLevel()), p.getPreferredRole().name(),
+                    String.valueOf(p.getPersonalityScore()), p.getPersonalityType().name(),
+                    p.getTeamNumber() != null ? p.getTeamNumber() : ""
+            );
             writer.write(line + "\n");
             logger.info("Participant saved to: " + filePath + " - ID: " + p.getId());
-
         } catch (IOException e) {
             throw new FileOperationException(
                     "Error saving participant to file: " + e.getMessage(),
@@ -204,19 +364,8 @@ public class FileHandler {
                     "SAVE",
                     e
             );
-        } finally {
-            // Ensure writer is always closed
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                    logger.error("Error closing file: " + filePath, e);
-                }
-            }
         }
     }
-
-    // ---------------- LOAD TEAMS FROM OUTPUT FILE ----------------
 
     public static List<Participant> loadTeamsFromOutput(String filePath) {
         List<Participant> teamParticipants = new ArrayList<>();
@@ -226,20 +375,18 @@ public class FileHandler {
             br.readLine(); // skip header
 
             while ((line = br.readLine()) != null) {
-                Participant p = parseTeamParticipant(line);
-                if (p != null) teamParticipants.add(p);
+                try {
+                    Participant p = parseTeamParticipant(line);
+                    if (p != null) teamParticipants.add(p);
+                } catch (Exception e) {
+                    logger.warn("Failed to parse team participant: " + line + " - " + e.getMessage());
+                    // Continue with other lines
+                }
             }
 
         } catch (IOException e) {
             throw new FileOperationException(
                     "Error reading team file: " + e.getMessage(),
-                    filePath,
-                    "READ",
-                    e
-            );
-        } catch (Exception e) {
-            throw new FileOperationException(
-                    "Unexpected error while loading teams",
                     filePath,
                     "READ",
                     e
@@ -251,46 +398,8 @@ public class FileHandler {
     }
 
     private static Participant parseTeamParticipant(String line) {
-        String trimmedLine = line.trim();
-
-        if (trimmedLine.isEmpty() || trimmedLine.startsWith("----")) {
-            return null;
-        }
-
-        String[] data = trimmedLine.split(",");
-
-        try {
-            if (data.length >= 9) {
-                String teamNumber = data[0].trim();
-                String id = data[1].trim();
-                String name = data[2].trim();
-                String email = data[3].trim();
-                String game = data[4].trim();
-                int skillLevel = Integer.parseInt(data[5].trim());
-                RoleType preferredRole = RoleType.valueOf(data[6].trim().toUpperCase());
-                int personalityScore = Integer.parseInt(data[7].trim());
-                PersonalityType personalityType = PersonalityType.fromString(data[8].trim());
-
-                Participant participant = new Participant(id, name, email, game, skillLevel, preferredRole, personalityScore, personalityType);
-                participant.setTeamNumber(teamNumber);
-
-                return participant;
-            }
-
-        } catch (Exception e) {
-            throw new ParticipantValidationException(
-                    "Invalid team participant row: " + trimmedLine,
-                    "TEAM_ROW",
-                    trimmedLine,
-                    e
-            );
-        }
-
-        throw new ParticipantValidationException(
-                "Not enough columns in team participant row: " + trimmedLine,
-                "TEAM_ROW",
-                trimmedLine
-        );
+        // Simplified version for team files - uses the main parser
+        return parseParticipant(line, 0); // lineNumber 0 for unknown
     }
 
     public static void ensureCSVExists(String filePath) {
@@ -305,10 +414,10 @@ public class FileHandler {
 
             // Create CSV file if it doesn't exist
             if (!file.exists()) {
-                FileWriter writer = new FileWriter(file);
-                writer.write("ID,Name,Email,Game,Skill,Role,PersonalityScore,PersonalityType\n");
-                writer.close();
-                logger.info("CSV created at: " + file.getAbsolutePath());
+                try (FileWriter writer = new FileWriter(file)) {
+                    writer.write("ID,Name,Email,Game,Skill,Role,PersonalityScore,PersonalityType\n");
+                    logger.info("CSV created at: " + file.getAbsolutePath());
+                }
             }
 
         } catch (Exception e) {
@@ -321,40 +430,4 @@ public class FileHandler {
         }
     }
 
-    // Uncomment and update this method if you need file chooser functionality
-    /*
-    public static String chooseLocationAndCreateCSV() {
-        try {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setDialogTitle("Select folder to save participant_data.csv");
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            chooser.setAcceptAllFileFilterUsed(false);
-
-            int result = chooser.showSaveDialog(null);
-
-            if (result == JFileChooser.APPROVE_OPTION) {
-
-                File folder = chooser.getSelectedFile();
-                String filePath = folder.getAbsolutePath() + File.separator + "participant_data.csv";
-
-                FileWriter writer = new FileWriter(filePath);
-                writer.write("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityType\n");
-                writer.close();
-
-                logger.info("CSV file created via file chooser: " + filePath);
-                return filePath;  // return path of new CSV file
-            }
-
-        } catch (Exception e) {
-            throw new FileOperationException(
-                    "Error creating CSV file via file chooser: " + e.getMessage(),
-                    "user_selected_path",
-                    "CREATE",
-                    e
-            );
-        }
-
-        return null;
-    }
-    */
 }

@@ -8,8 +8,6 @@ import utility.LoggerService;
 import java.util.*;
 import java.io.*;
 
-import static service.TeamBuilder.logger;
-
 public class ParticipantCreator {
 
     private static final RoleType[] ALLOWED_ROLES = {
@@ -20,42 +18,65 @@ public class ParticipantCreator {
             RoleType.COORDINATOR
     };
 
-    public static void createNewParticipant(String newCSVPath) {
-        FileHandler.ensureCSVExists(newCSVPath);
-
+    //Create new participant method - returns Participant object
+    public static Participant createNewParticipant() {
         Scanner sc = new Scanner(System.in);
 
         try {
-            System.out.println("\n=== Add New Participant ===");
+            System.out.println("\n=== REGISTER NEW PARTICIPANT ===");
 
             // ---------------- ID Input ----------------
             String id;
+            boolean idExists;
             do {
                 id = getNonEmptyInput(sc, "Enter Participant ID (e.g., P001, P10, P100): ");
+
+                // Validate ID format
                 if (!ParticipantValidator.validateId(id)) {
-                    System.out.println("Invalid ID format. Please use format like P1, P10, P100 (no leading zeros).");
-                } else if (isIdAlreadyExists(newCSVPath, id)) {
-                    System.out.println("This ID already exists. Please use a different ID.");
+                    System.out.println(" Invalid ID format. Please use format like P1, P10, P100.");
+                    idExists = true; // Force re-entry
+                    continue;
                 }
-            } while (!ParticipantValidator.validateId(id) || isIdAlreadyExists(newCSVPath, id));
+
+                // Check if ID already exists in merge pool
+                String finalId = id;
+                idExists = CSVMerger.getNewParticipants().stream()
+                        .anyMatch(p -> p.getId().equalsIgnoreCase(finalId));
+
+                if (idExists) {
+                    System.out.println(" Participant ID '" + id + "' already exists in the merge pool. Please use a different ID.");
+                }
+            } while (idExists || !ParticipantValidator.validateId(id));
 
             // ---------------- Name Input ----------------
             String name;
             do {
                 name = getNonEmptyInput(sc, "Enter Name: ");
                 if (!ParticipantValidator.validateName(name)) {
-                    System.out.println("Invalid name. Only letters and spaces allowed (2-50 characters).");
+                    System.out.println(" Invalid name. Only letters and spaces allowed (2-50 characters).");
                 }
             } while (!ParticipantValidator.validateName(name));
 
             // ---------------- Email Input ----------------
             String email;
+            boolean emailExists;
             do {
                 email = getNonEmptyInput(sc, "Enter Email: ");
                 if (!ParticipantValidator.validateEmail(email)) {
                     System.out.println("Invalid email format.");
+                    emailExists = true;
+                    continue;
                 }
-            } while (!ParticipantValidator.validateEmail(email));
+
+                // Check if email already exists in merge pool
+                String finalEmail = email;
+                emailExists = CSVMerger.getNewParticipants().stream()
+                        .anyMatch(p -> p.getEmail().equalsIgnoreCase(finalEmail));
+
+                if (emailExists) {
+                    System.out.println("Email '" + email + "' already exists in the merge pool. Please use a different email.");
+                }
+            } while (emailExists || !ParticipantValidator.validateEmail(email));
 
             // ---------------- Preferred Game ----------------
             String preferredGame;
@@ -89,7 +110,7 @@ public class ParticipantCreator {
                     preferredGame, preferredRole.name(), personalityType.name()
             )) {
                 System.out.println("Error: participant data invalid.");
-                return;
+                return null;
             }
 
             // ---------------- Create Object ----------------
@@ -98,23 +119,24 @@ public class ParticipantCreator {
                     skillLevel, preferredRole, personalityScore, personalityType
             );
 
-            // ---------------- Save to CSV ----------------
-            FileHandler.saveParticipant(newCSVPath, p);
-
-            // ---------------- SINGLE LOGGER CALL ----------------
-            logger.info("Participant CREATED - ID: " + id +
+            // ---------------- LOG ----------------
+            LoggerService.getInstance().info("Participant CREATED - ID: " + id +
                     ", Name: " + name +
                     ", Game: " + preferredGame +
                     ", Role: " + preferredRole);
-            System.out.println("\nParticipant added successfully!");
-            System.out.println("Personality Type: " + personalityType + " (" + personalityScore + ")");
-            System.out.println("\nParticipant Details:");
+
+            System.out.println("\n Participant created successfully!");
+            System.out.println(" Personality Type: " + personalityType + " (" + personalityScore + ")");
+            System.out.println("\n Participant Details:");
             System.out.println(p);
 
+            return p;
+
         } catch (Exception e) {
-            System.out.println("Unexpected error occurred.");
+            System.out.println("Unexpected error occurred during participant creation.");
             System.out.println("Error: " + e.getMessage());
             e.printStackTrace();
+            return null;
         }
     }
 
@@ -153,24 +175,5 @@ public class ParticipantCreator {
                 │ 5  │ Coordinator │ Communication leader.                   │
                 └────┴─────────────┴─────────────────────────────────────────┘
                 Enter role number (1-5):\s""";
-    }
-
-    // ---------------- ID Validation Helper ----------------
-    private static boolean isIdAlreadyExists(String csvPath, String id) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvPath))) {
-            String line;
-            // Skip header
-            reader.readLine();
-
-            while ((line = reader.readLine()) != null) {
-                String[] fields = line.split(",");
-                if (fields.length > 0 && fields[0].equalsIgnoreCase(id.trim())) {
-                    return true;
-                }
-            }
-        } catch (IOException e) {
-            System.out.println("Warning: Could not check existing IDs.");
-        }
-        return false;
     }
 }

@@ -1,12 +1,14 @@
 import cli.MainMenuHandler;
 import cli.OrganizerCLI;
 import cli.ParticipantCLI;
+import service.SurveyThreadManager;
 import utility.LoggerService;
 
+import java.io.File;
 import java.util.Scanner;
 
 public class MainCLI {
-    private static String TEAMS_OUTPUT_PATH = "C:\\Users\\DELL\\Desktop\\formatted_teams.csv";
+    private static String TEAMS_OUTPUT_PATH = System.getProperty("user.home") + File.separator + "Desktop" + File.separator + "formatted_teams.csv";
     private static String currentUploadedFilePath = null;
     private static final LoggerService logger = LoggerService.getInstance();
 
@@ -51,6 +53,7 @@ public class MainCLI {
         }
     }
 
+
     private static void handleOrganizerFlow(Scanner scanner) {
         OrganizerCLI organizerCLI = new OrganizerCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH);
         if (organizerCLI.authenticate()) {
@@ -66,5 +69,10 @@ public class MainCLI {
         System.out.println("\nExiting system... Goodbye!");
         scanner.close();
         System.exit(0);
+    }
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            SurveyThreadManager.shutdown();
+        }));
     }
 }

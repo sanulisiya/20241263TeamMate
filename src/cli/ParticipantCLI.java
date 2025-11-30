@@ -3,6 +3,7 @@ package cli;
 import model.Participant;
 import service.FileHandler;
 import service.ParticipantCreator;
+import service.CSVMerger;
 import utility.LoggerService;
 
 import java.io.File;
@@ -13,8 +14,10 @@ import java.util.Scanner;
 import java.util.stream.Collectors;
 
 public class ParticipantCLI {
+    // Logger instance
     private static final LoggerService logger = LoggerService.getInstance();
     private Scanner scanner;
+    //Path to organizer-uploaded CSV
     private String currentUploadedFilePath;
     private String teamsOutputPath;
     private String updatedFilePath;
@@ -24,6 +27,7 @@ public class ParticipantCLI {
         this.currentUploadedFilePath = currentUploadedFilePath;
         this.teamsOutputPath = teamsOutputPath;
     }
+    //Displays the participant menu and selection rutes
 
     public void showMenu() {
         logger.info("Participant menu accessed");
@@ -42,6 +46,7 @@ public class ParticipantCLI {
             case 2:
                 handleExistingParticipantLogin();
                 break;
+
             default:
                 logger.warn("Invalid participant option selected: " + participantChoice);
                 System.out.println("Invalid participant option.");
@@ -49,64 +54,69 @@ public class ParticipantCLI {
         }
     }
 
+    //Handles creation of a new participant and stores them in merge pool
     private void handleAddNewParticipant() {
         logger.info("Add new participant option selected");
 
         try {
-            System.out.println("\nEnter the folder path where you want to save participant_data.csv");
-            System.out.println("Example: C:\\Users\\DELL\\Desktop");
-            System.out.print("Path: ");
+            System.out.println("\n=== REGISTER NEW PARTICIPANT ===");
 
-            String folderPath = scanner.nextLine().trim();
-
-            if (folderPath.isEmpty()) {
-                logger.warn("Empty folder path provided for new participant");
-                System.out.println("Invalid folder. Returning to menu...\n");
-                return;
-            }
-
-            // Ensure folder exists
-            File folder = new File(folderPath);
-            if (!folder.exists() || !folder.isDirectory()) {
-                logger.warn("Invalid folder path provided: " + folderPath);
-                System.out.println("Folder not found. Returning to menu...\n");
-                return;
-            }
-
-            // Create new CSV inside that folder
-            String newCSVPath = folderPath + File.separator + "participant_data.csv";
-
-            File csvFile = new File(newCSVPath);
-            if (!csvFile.exists()) {
-                FileWriter writer = new FileWriter(csvFile);
-                writer.write("ID,Name,Email,PreferredGame,SkillLevel,Role,PersonalityScore,PersonalityType,TeamNumber\n");
-                writer.close();
-                logger.info("New CSV file created: " + newCSVPath);
-                System.out.println("\nCreated new CSV file: " + newCSVPath);
-            } else {
-                logger.info("Existing CSV file accessed: " + newCSVPath);
-                System.out.println("\nCSV file already exists. Adding participant to it.");
-            }
-
-            // Add the participant
+            // Create participant using ParticipantCreator
             logger.info("Starting participant creation process");
-            ParticipantCreator.createNewParticipant(newCSVPath);
+            Participant newParticipant = ParticipantCreator.createNewParticipant();
 
-            logger.info("Participant added successfully");
-            System.out.println("\nParticipant added successfully!");
-            System.out.println("Saved to: " + newCSVPath);
+            if (newParticipant != null) {
+                // Add to merge pool instead of saving directly to CSV
+                CSVMerger.addNewParticipant(newParticipant);
 
-            // Update the file path for organizer use
-            updatedFilePath = newCSVPath;
+                logger.info("Participant added to merge pool: " + newParticipant.getId());
+                System.out.println("\n Participant registered successfully!");
+                System.out.println(" Note: This participant is now in the merge pool.");
+                System.out.println("Organizer will merge them during team formation.");
+                System.out.println(" Email: " + newParticipant.getEmail());
+                System.out.println(" Temporary ID: " + newParticipant.getId());
+
+                // Show current queue status
+                int waitingCount = CSVMerger.getNewParticipantsCount();
+                System.out.println("\n Merge Queue: " + waitingCount + " participants waiting to be merged");
+
+                if (waitingCount > 1) {
+                    System.out.println(" The organizer will merge all waiting participants during next team formation.");
+                }
+            } else {
+                System.out.println(" Participant registration failed. Please try again.");
+            }
 
         } catch (Exception e) {
             logger.error("Failed to add new participant", e);
-            System.out.println("Failed to add participant: " + e.getMessage());
+            System.out.println(" Failed to register participant: " + e.getMessage());
         }
 
         System.out.println("Returning to main menu...\n");
     }
 
+    // Shows current merge queue status
+    private void handleViewMergeQueue() {
+        int waitingCount = CSVMerger.getNewParticipantsCount();
+
+        System.out.println("\n=== MERGE QUEUE STATUS ===");
+        System.out.println("Participants waiting to be merged: " + waitingCount);
+
+        if (waitingCount > 0) {
+            System.out.println("\n Waiting Participants:");
+            List<Participant> waitingParticipants = CSVMerger.getNewParticipants();
+            for (int i = 0; i < waitingParticipants.size(); i++) {
+                Participant p = waitingParticipants.get(i);
+                System.out.println((i + 1) + ". " + p.getName() + " (" + p.getEmail() + ") - " + p.getPreferredGame());
+            }
+            System.out.println("\n These participants will be merged when the organizer forms teams.");
+        } else {
+            System.out.println("No participants waiting in the merge queue.");
+        }
+        System.out.println("\nReturning to menu...");
+    }
+
+    //Handles login verifications for exsiting participants
     private void handleExistingParticipantLogin() {
         logger.info("Existing participant login option selected");
 
@@ -142,14 +152,14 @@ public class ParticipantCLI {
             }
         } catch (Exception e) {
             logger.error("Error loading participants for login", e);
-            System.out.println("Error loading participants: " + e.getMessage());
+            System.out.println(" Error loading participants: " + e.getMessage());
         }
     }
 
     private void handleSuccessfulLogin(Participant participant, String participantId) {
         logger.info("Participant login successful: " + participantId);
 
-        System.out.println("\nParticipant Found!");
+        System.out.println("\n Participant Found!");
         System.out.println(participant);
 
         System.out.print("\nDo you want to view your assigned team? (yes/no): ");
@@ -213,8 +223,8 @@ public class ParticipantCLI {
 
             logger.info("Displaying team " + teamNumber + " for participant: " + participantId);
 
-            System.out.println("\n You are in TEAM " + teamNumber);
-            System.out.println("---- Team Members ----");
+            System.out.println("\nYou are in TEAM " + teamNumber);
+            System.out.println("------ Team Members ------");
             for (Participant member : teamMembers) {
                 System.out.println("  " + member.getName() + " (" + member.getId() + ")");
                 System.out.println("    Game: " + member.getPreferredGame() +
@@ -232,6 +242,7 @@ public class ParticipantCLI {
             System.out.println("Please make sure teams have been formed and saved by the organizer.");
         }
     }
+    //Displays team statistics such as skill average, game distribution
 
     private void displayTeamStats(List<Participant> team) {
         if (team == null || team.isEmpty()) return;
@@ -260,23 +271,24 @@ public class ParticipantCLI {
 
         // Check for team balance
         if (personalityCount.containsKey("LEADER")) {
-            System.out.println("  Has a Leader");
+            System.out.println(" Has a Leader");
         } else {
-            System.out.println(" No Leader in team");
+            System.out.println("  No Leader in team");
         }
 
         if (personalityCount.containsKey("THINKER") && personalityCount.get("THINKER") >= 1) {
-            System.out.println("  Has Thinker(s)");
+            System.out.println(" Has Thinker(s)");
         } else {
             System.out.println(" No Thinker in team");
         }
     }
-
+    //Utility function to convert key/value maps into printable strings.
     private String formatMap(Map<String, Long> map) {
         return map.entrySet().stream()
                 .map(entry -> entry.getKey() + "(" + entry.getValue() + ")")
                 .collect(Collectors.joining(", "));
     }
+//Reads integer input safely.
 
     private int getIntInput() {
         try {

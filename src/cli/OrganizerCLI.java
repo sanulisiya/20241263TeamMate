@@ -3,12 +3,11 @@ package cli;
 import model.Participant;
 import service.*;
 import utility.LoggerService;
-
-import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
+
 
 public class OrganizerCLI {
+    //Logger for system
     private static final LoggerService logger = LoggerService.getInstance();
     private static final String ORGANIZER_PIN = "1234";
 
@@ -21,6 +20,7 @@ public class OrganizerCLI {
     private List<Participant> remainingPool;
     private String updatedFilePath;
 
+    //Constructor initializes fields
     public OrganizerCLI(Scanner scanner, String currentUploadedFilePath, String teamsOutputPath) {
         this.scanner = scanner;
         this.currentUploadedFilePath = currentUploadedFilePath;
@@ -41,23 +41,25 @@ public class OrganizerCLI {
             return false;
         }
 
-        System.out.println("\n PIN Verified! Access Granted.");
+        //Authenticates organizer using a PIN
+
+        System.out.println("\n PIN Verified  Access Granted.");
         logger.info("Organizer PIN verified successfully");
         return true;
     }
+    //Main menu loop for organizer operations.
 
     public void showMenu() {
         boolean organizerRunning = true;
 
         while (organizerRunning) {
             try {
-                System.out.println("\n------ ORGANIZER PANEL -------");
+                System.out.println("\n-------- ORGANIZER PANEL ---------");
                 System.out.println("1. Upload CSV");
                 System.out.println("2. View All Participants");
                 System.out.println("3. Formation of Teams");
                 System.out.println("4. Save Formed Teams");
-                System.out.println("5. View Team Assignments");
-                System.out.println("6. Back to Main Menu");
+                System.out.println("5. Back to Main Menu");
                 System.out.print("Select option: ");
 
                 int choice = getIntInput();
@@ -75,10 +77,8 @@ public class OrganizerCLI {
                     case 4:
                         handleSaveTeams();
                         break;
+
                     case 5:
-                        handleViewTeamAssignments();
-                        break;
-                    case 6:
                         organizerRunning = false;
                         logger.info("Organizer returning to main menu");
                         System.out.println("Returning to main menu...");
@@ -93,7 +93,7 @@ public class OrganizerCLI {
             }
         }
     }
-
+    //Loads a CSV file of participants using FileHandler.
     private void handleUploadCSV() {
         System.out.print("\nEnter CSV File Path: ");
         String path = scanner.nextLine();
@@ -119,6 +119,7 @@ public class OrganizerCLI {
             System.out.println("Error uploading CSV: " + e.getMessage());
         }
     }
+//Displays all participants loaded from the currently active CSV file.
 
     private void handleViewParticipants() {
         if (updatedFilePath == null && participants.isEmpty()) {
@@ -131,7 +132,7 @@ public class OrganizerCLI {
                 participants = FileHandler.loadParticipantsSingleThread(updatedFilePath);
             }
             logger.info("Viewing all participants from: " + updatedFilePath);
-            System.out.println("\n--- PARTICIPANT LIST ---");
+            System.out.println("\n----- PARTICIPANT LIST -----");
             System.out.println("Total Participants: " + participants.size());
             System.out.println("Source File: " + (updatedFilePath != null ? updatedFilePath : "Default file"));
             for (int i = 0; i < participants.size(); i++) {
@@ -142,13 +143,14 @@ public class OrganizerCLI {
             System.out.println("Error loading participants: " + e.getMessage());
         }
     }
+//Triggers team formation through TeamFormationHandler.
 
     private void handleTeamFormation() {
         if (updatedFilePath == null) {
             System.out.println("No file uploaded. Upload CSV first.");
             return;
         }
-
+// Delegate the logic to TeamFormationHandler
         TeamFormationHandler teamFormationHandler = new TeamFormationHandler(scanner, updatedFilePath, teamsOutputPath);
         TeamFormationResult result = teamFormationHandler.handleTeamFormation();
 
@@ -158,7 +160,7 @@ public class OrganizerCLI {
             this.updatedFilePath = result.getUpdatedFilePath();
         }
     }
-
+    //Saves currently formed teams into a CSV file chosen by the organizer.
     private void handleSaveTeams() {
         if (teams == null || teams.isEmpty()) {
             System.out.println("Teams not formed yet. Please form teams first (Option 3).");
@@ -193,40 +195,6 @@ public class OrganizerCLI {
             System.out.println(" Error saving teams: " + e.getMessage());
         }
     }
-
-    private void handleViewTeamAssignments() {
-        try {
-            File teamFile = new File(teamsOutputPath);
-            if (!teamFile.exists()) {
-                System.out.println("No team assignments found. Please form and save teams first.");
-                return;
-            }
-
-            List<Participant> teamAssignments = FileHandler.loadTeamsFromOutput(teamsOutputPath);
-            if (teamAssignments.isEmpty()) {
-                System.out.println("No team assignments found in the file.");
-                return;
-            }
-
-            logger.info("Viewing team assignments from: " + teamsOutputPath);
-            System.out.println("\n--- CURRENT TEAM ASSIGNMENTS ---");
-
-            Map<String, List<Participant>> teamsMap = teamAssignments.stream()
-                    .collect(Collectors.groupingBy(Participant::getTeamNumber));
-
-            for (Map.Entry<String, List<Participant>> entry : teamsMap.entrySet()) {
-                System.out.println("\nTeam " + entry.getKey() + " (" + entry.getValue().size() + " members):");
-                for (Participant member : entry.getValue()) {
-                    System.out.println("  " + member.getName() + " (" + member.getId() + ") - " +
-                            member.getPreferredRole() + " - " + member.getPersonalityType());
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Error loading team assignments", e);
-            System.out.println("Error loading team assignments: " + e.getMessage());
-        }
-    }
-
     private int getIntInput() {
         try {
             int input = scanner.nextInt();

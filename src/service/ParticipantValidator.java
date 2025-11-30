@@ -26,9 +26,9 @@ public class ParticipantValidator {
             "^[A-Za-z ]{2,50}$"
     );
 
-    // ID pattern - CORRECTED: P followed by 1-3 digits (P1, P10, P100)
+    // Update the ID pattern to be more flexible
     private static final Pattern ID_PATTERN = Pattern.compile(
-            "[Pp]\\d{3,}"
+            "^[Pp]\\d{1,3}$"  // P followed by 1-3 digits (P1, P10, P100)
     );
 
     // Validate ID - CORRECTED

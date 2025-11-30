@@ -15,3 +15,286 @@
 [2025-11-26 16:29:32] [INFO] [ParticipantService.logParticipantAction] PARTICIPANT P200: CREATED - Name: SSSS, Game: Chess, Role: COORDINATOR
 [2025-11-26 16:29:32] [INFO] [MainCLI.main] Participant added successfully
 [2025-11-28 04:43:42] [INFO] Application started
+[2025-11-28 06:57:15] [INFO] Application started
+[2025-11-29 08:45:34] [INFO] Organizer PIN verified successfully
+[2025-11-29 11:53:57] [INFO] Organizer returning to main menu
+[2025-11-29 11:53:59] [INFO] Participant menu accessed
+[2025-11-29 11:54:00] [INFO] Existing participant login option selected
+[2025-11-30 06:01:34] [INFO] Organizer PIN verified successfully
+[2025-11-30 06:01:49] [INFO] Loaded 127 participants from: C:\Users\DELL\Desktop\participants_sample.csv
+[2025-11-30 06:01:49] [INFO] CSV uploaded successfully: C:\Users\DELL\Desktop\participants_sample.csv with 127 participants
+[2025-11-30 09:37:25] [INFO] Application started
+[2025-11-30 09:37:27] [INFO] Participant menu accessed
+[2025-11-30 09:37:28] [INFO] Add new participant option selected
+[2025-11-30 09:37:28] [INFO] Starting participant creation process
+[2025-11-30 09:37:44] [INFO] Participant CREATED - ID: P001, Name: sss, Game: Dota, Role: COORDINATOR
+[2025-11-30 09:37:44] [INFO] Added new participant to merge pool - ID: P001, Email: ssdnhdsuo@gmai
+[2025-11-30 09:37:44] [INFO] Participant added to merge pool: P001
+[2025-11-30 09:37:47] [INFO] Participant menu accessed
+[2025-11-30 09:37:48] [INFO] Existing participant login option selected
+[2025-11-30 09:37:52] [INFO] Organizer PIN verified successfully
+[2025-11-30 09:38:19] [DEBUG] File validation passed: C:\Users\DELL\Desktop\participants_sample.csv
+[2025-11-30 09:38:19] [DEBUG] Skipping header line: ID,Name,Email,PreferredGame,SkillLevel,#NAME?,PersonalityScore,PersonalityTypeP001,Participant_1,user1@university.edu,Chess,2,Strategist,95,Leader
+[2025-11-30 09:38:19] [INFO] Loaded 127 participants from: C:\Users\DELL\Desktop\participants_sample.csv (Failed: 0 lines)
+[2025-11-30 09:38:19] [INFO] CSV uploaded successfully: C:\Users\DELL\Desktop\participants_sample.csv with 127 participants
+[2025-11-30 09:38:21] [DEBUG] File validation passed: C:\Users\DELL\Desktop\participants_sample.csv
+[2025-11-30 09:38:21] [DEBUG] Skipping header line: ID,Name,Email,PreferredGame,SkillLevel,#NAME?,PersonalityScore,PersonalityTypeP001,Participant_1,user1@university.edu,Chess,2,Strategist,95,Leader
+[2025-11-30 09:38:21] [INFO] Loaded 127 participants from: C:\Users\DELL\Desktop\participants_sample.csv (Failed: 0 lines)
+[2025-11-30 09:38:21] [INFO] Viewing all participants from: C:\Users\DELL\Desktop\participants_sample.csv
+[2025-11-30 09:38:26] [INFO] Starting simple merge process
+[2025-11-30 09:38:29] [DEBUG] File validation passed: C:\Users\DELL\Desktop\participants_sample.csv
+[2025-11-30 09:38:29] [DEBUG] Skipping header line: ID,Name,Email,PreferredGame,SkillLevel,#NAME?,PersonalityScore,PersonalityTypeP001,Participant_1,user1@university.edu,Chess,2,Strategist,95,Leader
+[2025-11-30 09:38:29] [INFO] Loaded 127 participants from: C:\Users\DELL\Desktop\participants_sample.csv (Failed: 0 lines)
+[2025-11-30 09:38:29] [INFO] Cleared 1 participants from merge pool
+[2025-11-30 09:38:29] [INFO] Merge completed. Total participants: 128
+[2025-11-30 09:38:34] [INFO] Starting team formation with 128 participants, team size: 6
+[2025-11-30 09:38:34] [INFO] Starting team formation process
+[2025-11-30 09:38:34] [DEBUG] Parameters - Participants: 128, TeamSize: 6
+[2025-11-30 09:38:34] [DEBUG] Role distribution - Leaders: 40, Thinkers: 41, Balanced: 41, Motivators: 6
+[2025-11-30 09:38:34] [INFO] Possible teams to form: 21
+[2025-11-30 09:38:34] [DEBUG] Overall average skill level: 5.35
+[2025-11-30 09:38:34] [DEBUG] Excess leaders added to remaining: 19
+[2025-11-30 09:38:34] [DEBUG] Thinkers assigned to teams: 21
+[2025-11-30 09:38:34] [INFO] Starting multi-threaded team assignment with 67 participants
+[2025-11-30 09:38:34] [DEBUG] Found 3 valid teams for participant P041
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P032
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P032 to team 17
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P041 to team 12
+[2025-11-30 09:38:34] [DEBUG] Found 3 valid teams for participant P062
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P098
+[2025-11-30 09:38:34] [DEBUG] Found 3 valid teams for participant P048
+[2025-11-30 09:38:34] [DEBUG] Found 3 valid teams for participant P089
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P036
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P036 to team 7
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P119
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P110
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P062 to team 6
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P018
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P053
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P115
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P098 to team 16
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P095
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P090
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P048 to team 13
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P089 to team 14
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P045
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P119 to team 10
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P026
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P053 to team 3
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P083
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P110 to team 16
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P095 to team 19
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P090 to team 15
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P009
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P044
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P112
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P115 to team 10
+[2025-11-30 09:38:34] [DEBUG] Found 7 valid teams for participant P050
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P026 to team 3
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P083 to team 20
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P011
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P038
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P045 to team 19
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P021
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P009 to team 11
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P044 to team 16
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P112 to team 4
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P123
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P018 to team 10
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P050 to team 14
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P117
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P029
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P038 to team 8
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P078
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P087
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P071
+[2025-11-30 09:38:34] [DEBUG] Found 4 valid teams for participant P023
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P021 to team 4
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P123 to team 9
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P015
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P011 to team 10
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P106
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P117 to team 16
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P005
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P023 to team 8
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P126
+[2025-11-30 09:38:34] [DEBUG] Found 3 valid teams for participant P065
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P087 to team 9
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P015 to team 2
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P017
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P106 to team 3
+[2025-11-30 09:38:34] [DEBUG] Team 10 full, participant P071 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P113
+[2025-11-30 09:38:34] [DEBUG] Team 16 full, participant P029 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P056
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P056 to team 7
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P126 to team 18
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P003
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P078 to team 9
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P005 to team 2
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P042
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P017 to team 1
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P008
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P096
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P113 to team 3
+[2025-11-30 09:38:34] [DEBUG] Found 4 valid teams for participant P121
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P109
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P035
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P003 to team 5
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P065 to team 9
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P127
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P047
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P042 to team 0
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P080
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P008 to team 19
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P102
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P121 to team 13
+[2025-11-30 09:38:34] [DEBUG] No valid teams found for participant P120
+[2025-11-30 09:38:34] [DEBUG] Team 9 full, participant P109 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P068
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P127 to team 0
+[2025-11-30 09:38:34] [DEBUG] No valid teams found for participant P084
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P080 to team 18
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P047 to team 19
+[2025-11-30 09:38:34] [DEBUG] Found 3 valid teams for participant P122
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P102 to team 2
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P074
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P020
+[2025-11-30 09:38:34] [DEBUG] No valid teams found for participant P057
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P096 to team 0
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P068 to team 18
+[2025-11-30 09:38:34] [DEBUG] Found 9 valid teams for participant P105
+[2025-11-30 09:38:34] [DEBUG] No suitable team found for participant P120, added to remaining
+[2025-11-30 09:38:34] [DEBUG] No suitable team found for participant P084, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P014
+[2025-11-30 09:38:34] [DEBUG] Team 19 full, participant P035 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P122 to team 14
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P092
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P074 to team 2
+[2025-11-30 09:38:34] [DEBUG] No suitable team found for participant P057, added to remaining
+[2025-11-30 09:38:34] [DEBUG] No valid teams found for participant P006
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P086
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P105 to team 12
+[2025-11-30 09:38:34] [DEBUG] No valid teams found for participant P075
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P077
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P002
+[2025-11-30 09:38:34] [DEBUG] Found 1 valid teams for participant P059
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P092 to team 8
+[2025-11-30 09:38:34] [DEBUG] Team 2 full, participant P014 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Found 2 valid teams for participant P101
+[2025-11-30 09:38:34] [DEBUG] No suitable team found for participant P006, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P086 to team 0
+[2025-11-30 09:38:34] [DEBUG] No suitable team found for participant P075, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P077 to team 14
+[2025-11-30 09:38:34] [DEBUG] Team 2 full, participant P020 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Assigned participant P101 to team 8
+[2025-11-30 09:38:34] [DEBUG] Team 14 full, participant P059 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 14 full, participant P002 added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 0 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 1 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 2 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 3 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 4 incomplete with 4 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 5 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 6 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 7 incomplete with 4 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 8 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 9 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 10 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 11 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 12 incomplete with 4 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 13 incomplete with 4 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 14 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 15 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 16 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 17 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 18 incomplete with 5 members, added to remaining
+[2025-11-30 09:38:34] [DEBUG] Team 19 completed with 6 members
+[2025-11-30 09:38:34] [DEBUG] Team 20 incomplete with 3 members, added to remaining
+[2025-11-30 09:38:34] [INFO] Team formation completed - Teams: 9, Complete teams: 9, Remaining participants: 74
+[2025-11-30 09:38:34] [DEBUG] Retrieving remaining participants: 74
+[2025-11-30 09:38:34] [INFO] Forming leftover teams from 74 participants
+[2025-11-30 09:38:34] [INFO] Starting leftover team formation
+[2025-11-30 09:38:34] [DEBUG] Retrieving remaining participants: 74
+[2025-11-30 09:38:34] [DEBUG] Leftover pool size: 74, Target team size: 6
+[2025-11-30 09:38:34] [DEBUG] Creating 12 new teams from leftovers
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 100 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 101 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 102 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 103 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 104 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 105 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 106 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 107 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 108 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 109 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 110 with initial member
+[2025-11-30 09:38:34] [DEBUG] Created leftover team 111 with initial member
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P009 to team 110
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P121 to team 110
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P068 to team 102
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P021 to team 110
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P076 to team 110
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P013 to team 102
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P109 to team 102
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P037 to team 111
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P057 to team 102
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P046 to team 102
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P035 to team 110
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P107 to team 107
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P051 to team 106
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P097 to team 107
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P012 to team 107
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P052 to team 108
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P010 to team 106
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P099 to team 109
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P004 to team 109
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P007 to team 108
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P069 to team 108
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P105 to team 108
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P054 to team 107
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P103 to team 109
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P056 to team 107
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P100 to team 108
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P029 to team 106
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P120 to team 106
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P027 to team 111
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P112 to team 109
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P067 to team 105
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P062 to team 105
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P043 to team 100
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P094 to team 101
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P034 to team 109
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P055 to team 106
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P125 to team 105
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P016 to team 105
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P006 to team 105
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P075 to team 101
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P001 to team 103
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P061 to team 103
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P049 to team 103
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P039 to team 103
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P048 to team 100
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P002 to team 100
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P020 to team 101
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P028 to team 100
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P080 to team 104
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P090 to team 104
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P125 to team 104
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P059 to team 101
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P003 to team 100
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P032 to team 111
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P072 to team 101
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P108 to team 111
+[2025-11-30 09:38:34] [DEBUG] No suitable leftover team for participant P126
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P041 to team 104
+[2025-11-30 09:38:34] [DEBUG] No suitable leftover team for participant P084
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P118 to team 103
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P088 to team 104
+[2025-11-30 09:38:34] [DEBUG] Assigned leftover participant P014 to team 111
+[2025-11-30 09:38:34] [INFO] Leftover team formation completed - New teams: 12, Complete leftover teams: 12, Still unassigned: 2
+[2025-11-30 09:38:34] [DEBUG] Retrieving remaining participants: 2
+[2025-11-30 09:38:34] [INFO] 2 participants remaining unassigned
+[2025-11-30 09:39:10] [INFO] Team formation completed. Total teams: 21, remaining: 2
+[2025-11-30 09:39:30] [INFO] Teams saved successfully to: C:\Users\DELL\Desktop\saveee.csv
+[2025-11-30 09:39:35] [INFO] Organizer returning to main menu

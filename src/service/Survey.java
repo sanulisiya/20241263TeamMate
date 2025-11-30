@@ -1,10 +1,6 @@
 package service;
 
 import java.util.Scanner;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class Survey {
 
@@ -23,13 +19,10 @@ public class Survey {
                 "5. I like making quick decisions and adapting in dynamic situations."
         };
 
-        // Start progress indicator in background
-        SurveyThreadManager.startProgressIndicator(questions.length);
-
         for (int i = 0; i < questions.length; i++) {
             String question = questions[i];
 
-            // Get answer with timeout capability
+            // Get answer with timeout using ThreadManager
             Integer answer = SurveyThreadManager.getAnswerWithTimeout(question, 30, i + 1);
 
             if (answer == null) {
@@ -38,26 +31,10 @@ public class Survey {
             }
 
             total += answer;
-
-            // Save result asynchronously after each question
-            SurveyThreadManager.saveQuestionResultAsync(i + 1, question, answer);
         }
-
-        // Stop progress indicator
-        SurveyThreadManager.stopProgressIndicator();
 
         int scaledScore = total * 4;
         String type = classifyPersonality(scaledScore);
-
-        // Get classification asynchronously
-        CompletableFuture<String> asyncType = SurveyThreadManager.classifyPersonalityAsync(scaledScore);
-
-        try {
-            type = asyncType.get(5, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            System.out.println("Classification timed out, using synchronous method");
-            type = classifyPersonality(scaledScore);
-        }
 
         System.out.println("\n===== Personality Summary =====");
         System.out.println("Raw Score: " + total + " (out of 25)");
@@ -65,20 +42,10 @@ public class Survey {
         System.out.println("Personality Type: " + type);
         System.out.println("Description: " + getTypeDescription(type));
 
-        // Save final result asynchronously
-        SurveyThreadManager.saveSurveyResultAsync(total, scaledScore, type);
-
         return scaledScore;
     }
 
     public static String classifyPersonality(int score) {
-        // Simulate some processing time
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
         if (score >= 90) return "Leader";
         else if (score >= 70) return "Balanced";
         else if (score >= 50) return "Thinker";
@@ -93,13 +60,5 @@ public class Survey {
             case "Motivator" -> "Boosting morale and encouraging collaboration to achieve goals.";
             default -> "Unknown type.";
         };
-    }
-
-    // Method for batch processing multiple surveys
-    public static CompletableFuture<Integer> conductSurveyAsync() {
-        return CompletableFuture.supplyAsync(() -> {
-            System.out.println("\n--- Starting async survey ---");
-            return conductPersonalitySurvey();
-        });
     }
 }

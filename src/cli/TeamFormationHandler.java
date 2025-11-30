@@ -22,12 +22,30 @@ public class TeamFormationHandler {
     }
 
     public TeamFormationResult handleTeamFormation() {
-        // AUTO-MERGE FUNCTIONALITY
-        System.out.print("\nDo you want to merge with participant-added data file? (yes/no): ");
+        // Check if we have uploaded file
+        if (uploadedFilePath == null) {
+            System.out.println("No file uploaded. Please upload a CSV first.");
+            return null;
+        }
+
+        // ENHANCED MERGE FUNCTIONALITY
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println(" DATA MERGE OPTIONS");
+        System.out.println("=".repeat(60));
+
+        int newParticipantsCount = CSVMerger.getNewParticipantsCount();
+        System.out.println(" Current Status:");
+        System.out.println("   - Organizer file: " + uploadedFilePath);
+        System.out.println("   - New participants waiting: " + newParticipantsCount);
+
+        System.out.print("\nDo you want to merge additional data? (yes/no): ");
         String mergeChoice = scanner.nextLine().trim().toLowerCase();
 
-        List<Participant> workingParticipants = handleMergeChoice(mergeChoice);
-        if (workingParticipants == null) return null;
+        List<Participant> workingParticipants = handleEnhancedMergeChoice(mergeChoice);
+        if (workingParticipants == null || workingParticipants.isEmpty()) {
+            System.out.println("No participants available for team formation.");
+            return null;
+        }
 
         // TEAM SIZE INPUT
         int teamSize = getTeamSize(workingParticipants);
@@ -36,69 +54,56 @@ public class TeamFormationHandler {
         return performTeamFormation(workingParticipants, teamSize);
     }
 
-    private List<Participant> handleMergeChoice(String mergeChoice) {
+    private List<Participant> handleEnhancedMergeChoice(String mergeChoice) {
         List<Participant> workingParticipants = new ArrayList<>();
 
         if (mergeChoice.equals("yes") || mergeChoice.equals("y")) {
-            System.out.print("Enter path to participant-added CSV file: ");
-            String participantFile = scanner.nextLine().trim();
+            try {
+                // Create merged file on Desktop
+                String desktopPath = System.getProperty("user.home") + File.separator + "Desktop";
+                String timestamp = String.valueOf(System.currentTimeMillis());
+                String tempMergedPath = desktopPath + File.separator + "merged_participants_" + timestamp + ".csv";
 
-            if (!participantFile.isEmpty()) {
-                try {
-                    // Check if participant file exists
-                    File partFile = new File(participantFile);
-                    if (!partFile.exists()) {
-                        logger.warn("Participant file not found: " + participantFile);
-                        System.out.println("Participant file not found. Continuing with organizer file only.");
-                        workingParticipants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
-                    } else {
-                        // Auto-merge the files with ID generation
-                        String timestamp = String.valueOf(System.currentTimeMillis());
-                        String tempMergedPath = "C:\\Users\\DELL\\Desktop\\merged_participants_" + timestamp + ".csv";
+                logger.info("Starting simple merge process");
+                System.out.println("\n Starting merge process...");
+                System.out.println(" Merged file will be saved to: " + tempMergedPath);
 
-                        logger.info("Auto-merging files: " + uploadedFilePath + " with " + participantFile);
-                        System.out.println("Merging files and generating IDs for new participants...");
-                        workingParticipants = CSVMerger.mergeCSVFiles(uploadedFilePath, participantFile, tempMergedPath);
-                        uploadedFilePath = tempMergedPath; // Update to use merged file
-                        logger.info("Files merged successfully. Total participants: " + workingParticipants.size());
-                        System.out.println("✓ Successfully merged files! Total participants: " + workingParticipants.size());
+                workingParticipants = CSVMerger.mergeWithOptions(uploadedFilePath, tempMergedPath, scanner);
 
-                        // Show sample of new IDs assigned
-                        System.out.println("\nSample of merged participants:");
-                        for (int i = 0; i < Math.min(5, workingParticipants.size()); i++) {
-                            Participant p = workingParticipants.get(i);
-                            System.out.println("  " + p.getId() + " | " + p.getName() + " | " + p.getEmail());
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.error("Auto-merge failed", e);
-                    System.out.println("Auto-merge failed: " + e.getMessage());
-                    System.out.println("Continuing with organizer file only...");
-                    workingParticipants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
-                }
-            } else {
-                System.out.println("No file path provided. Continuing with organizer file only.");
-                workingParticipants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
+                uploadedFilePath = tempMergedPath; // Update to use merged file
+                logger.info("Merge completed. Total participants: " + workingParticipants.size());
+                System.out.println(" Merge completed! Total participants: " + workingParticipants.size());
+
+            } catch (Exception e) {
+                logger.error("Merge failed", e);
+                System.out.println(" Merge failed: " + e.getMessage());
+                System.out.println("Continuing with organizer file only...");
+                workingParticipants = loadOrganizerFileOnly();
             }
         } else {
             // Load without merging
-            try {
-                workingParticipants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
-                logger.info("Loaded participants without merging: " + workingParticipants.size());
-                System.out.println("Loaded " + workingParticipants.size() + " participants from organizer file.");
-            } catch (Exception e) {
-                logger.error("Error loading participants", e);
-                System.out.println("Error loading participants: " + e.getMessage());
-                return null;
-            }
+            workingParticipants = loadOrganizerFileOnly();
         }
         return workingParticipants;
+    }
+    private List<Participant> loadOrganizerFileOnly() {
+        try {
+            List<Participant> participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
+            logger.info("Loaded participants without merging: " + participants.size());
+            System.out.println("Loaded " + participants.size() + " participants from organizer file.");
+            return participants;
+        } catch (Exception e) {
+            logger.error("Error loading organizer file", e);
+            System.out.println("Error loading participants: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     private int getTeamSize(List<Participant> workingParticipants) {
         System.out.println("\n" + "=".repeat(50));
-        System.out.println("PROCEEDING TO TEAM FORMATION");
+        System.out.println(" PROCEEDING TO TEAM FORMATION");
         System.out.println("=".repeat(50));
+        System.out.println("Total participants available: " + workingParticipants.size());
 
         System.out.print("Enter desired team size: ");
         try {
@@ -114,10 +119,14 @@ public class TeamFormationHandler {
                 System.out.println("Team size cannot be larger than total participants (" + workingParticipants.size() + ").");
                 return -1;
             }
+
+            int maxPossibleTeams = workingParticipants.size() / teamSize;
+            System.out.println("Maximum possible teams: " + maxPossibleTeams);
+
             return teamSize;
         } catch (Exception e) {
             scanner.nextLine();
-            System.out.println("Invalid input. Please enter a number.");
+            System.out.println(" Invalid input. Please enter a number.");
             return -1;
         }
     }
@@ -136,11 +145,12 @@ public class TeamFormationHandler {
                 remainingPool = TeamBuilder.getRemainingParticipants();
 
                 // DISPLAY MAIN TEAMS
-                System.out.println("\n================== MAIN TEAMS ==================");
+                System.out.println("\n ================== MAIN TEAMS ==================");
                 if (teams.isEmpty()) {
                     System.out.println("No complete teams could be formed with current constraints.");
                 } else {
                     for (int i = 0; i < teams.size(); i++) {
+                        System.out.println("\n--------------------------------------------------------------------------------------------------------------------------");
                         System.out.println("\n======= TEAM " + (i + 1) + " =======");
                         List<Participant> currentTeam = teams.get(i);
                         double teamAvgSkill = currentTeam.stream()
@@ -156,7 +166,7 @@ public class TeamFormationHandler {
                                 .filter(p -> p.getPersonalityType().name().equals("THINKER"))
                                 .count();
 
-                        System.out.printf("Average Skill: %.2f | Size: %d | Leaders: %d | Thinkers: %d\n",
+                        System.out.printf(" Average Skill: %.2f | Size: %d | Leaders: %d | Thinkers: %d\n",
                                 teamAvgSkill, currentTeam.size(), leaderCount, thinkerCount);
 
                         for (Participant p : currentTeam) {
@@ -177,11 +187,11 @@ public class TeamFormationHandler {
                     remainingPool = TeamBuilder.getRemainingParticipants();
 
                     if (!leftoverTeams.isEmpty()) {
-                        System.out.println("\nFORMING LEFTOVER TEAMS - Note: No strict rules followed in leftover team formationa");
-                        System.out.println("\n================== LEFTOVER TEAMS ==================");
+                        System.out.println("\nFORMING LEFTOVER TEAMS - Note: No strict rules followed in leftover team formation");
+                        System.out.println("\n===================== LEFTOVER TEAMS ======================");
                         int offset = teams.size();
                         for (int i = 0; i < leftoverTeams.size(); i++) {
-                            System.out.println("\n======= TEAM " + (offset + i + 1) + " =======");
+                            System.out.println("\n======== TEAM " + (offset + i + 1) + " ========");
                             List<Participant> currentLeftoverTeam = leftoverTeams.get(i);
                             double teamAvgSkill = currentLeftoverTeam.stream()
                                     .mapToInt(Participant::getSkillLevel)
@@ -232,7 +242,7 @@ public class TeamFormationHandler {
                     TeamBuilder.getRemainingParticipants().clear();
 
                     logger.info("Rearranging teams with " + workingParticipants.size() + " participants");
-                    System.out.println("\nRearranging teams with " + workingParticipants.size() + " participants...\n");
+                    System.out.println("\n Rearranging teams with " + workingParticipants.size() + " participants...\n");
                 } else {
                     // Combine main teams and leftover teams
                     if (leftoverTeams != null && !leftoverTeams.isEmpty()) {
@@ -243,17 +253,17 @@ public class TeamFormationHandler {
                     // Show final summary
                     logger.info("Team formation completed. Total teams: " + teams.size() + ", remaining: " + remainingPool.size());
                     System.out.println("\n" + "=".repeat(60));
-                    System.out.println("✓ TEAM FORMATION COMPLETED SUCCESSFULLY!");
+                    System.out.println("TEAM FORMATION COMPLETED SUCCESSFULLY!");
                     System.out.println("=".repeat(60));
                     System.out.println("Total teams formed: " + teams.size());
                     System.out.println("Total participants in teams: " + teams.stream().mapToInt(List::size).sum());
-                    System.out.println("Remaining unassigned: " + remainingPool.size());
-                    System.out.println("Merged participants used: " + workingParticipants.size());
+                    System.out.println(" Remaining unassigned: " + remainingPool.size());
+                    System.out.println(" Total participants processed: " + workingParticipants.size());
                 }
 
             } catch (Exception e) {
                 logger.error("Error forming teams", e);
-                System.out.println("Error forming teams: " + e.getMessage());
+                System.out.println(" Error forming teams: " + e.getMessage());
                 e.printStackTrace();
                 arranging = false;
             }

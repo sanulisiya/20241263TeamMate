@@ -17,12 +17,7 @@ public class Team {
         this.avgSkill = 0.0;
     }
 
-    // Add a participant
-    public void addMember(Participant participant) {
-        members.add(participant);
-        totalSkill += participant.getSkillLevel();
-        avgSkill = (double) totalSkill / members.size();
-    }
+
 
     // Getters
     public int getTeamId() {

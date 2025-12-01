@@ -1,6 +1,8 @@
 package service;
+
 import utility.LoggerService;
 import model.Participant;
+import model.Team; // Using the external model.Team class
 import exception.TeamFormationException;
 
 import java.util.*;
@@ -18,29 +20,7 @@ public class TeamBuilder {
     // Logger instance
     public static final LoggerService logger = LoggerService.getInstance();
 
-    private static class TeamState {
-        // Use synchronized collections if members were accessed outside synchronized blocks
-        List<Participant> members = new ArrayList<>();
-        Map<String, Integer> roleCounts = new HashMap<>();
-        int skillTotal = 0;
-        int teamId;
-
-        public TeamState(int id) {
-            this.teamId = id;
-        }
-
-        // Method is *not* synchronized because it's called inside a synchronized block in formTeams
-        public void addMember(Participant p) {
-            try {
-                if (p != null) {
-                    members.add(p);
-                    skillTotal += safeSkill(p);
-                    String role = safeRole(p);
-                    roleCounts.merge(role, 1, Integer::sum);
-                }
-            } catch (Exception ignored) {}
-        }
-    }
+    // *** REMOVED: private static class TeamState ***
 
     public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
         logger.info("Starting team formation process");
@@ -59,8 +39,9 @@ public class TeamBuilder {
         }
 
         try {
+            // Group by safeRole, which mimics the logic now inside model.Team's addMember
             Map<String, List<Participant>> rolesMap = participants.stream()
-                    .collect(Collectors.groupingBy(p -> safeRole(p)));
+                    .collect(Collectors.groupingBy(TeamBuilder::safeRole));
 
             // Log role distribution
             logger.debug("Role distribution - Leaders: " + rolesMap.getOrDefault("leader", new ArrayList<>()).size() +
@@ -95,12 +76,13 @@ public class TeamBuilder {
 
             logger.debug("Overall average skill level: " + String.format("%.2f", overallAvg));
 
-            List<TeamState> teamStates = new ArrayList<>();
+            // *** CHANGE: Using model.Team instead of TeamState ***
+            List<Team> teams = new ArrayList<>();
             Collections.shuffle(leaders, new Random());
             for (int i = 0; i < possibleTeams; i++) {
-                TeamState state = new TeamState(i);
-                state.addMember(leaders.get(i));
-                teamStates.add(state);
+                Team team = new Team(i);
+                team.addMember(leaders.get(i));
+                teams.add(team);
             }
             if (leaders.size() > possibleTeams) {
                 logger.debug("Excess leaders added to remaining: " + (leaders.size() - possibleTeams));
@@ -111,10 +93,12 @@ public class TeamBuilder {
             Collections.shuffle(thinkers, new Random());
             Iterator<Participant> thinkerIterator = thinkers.iterator();
             int thinkersAssigned = 0;
-            for (TeamState team : teamStates) {
+            // *** CHANGE: Iterating over List<Team> ***
+            for (Team team : teams) {
                 if (!thinkerIterator.hasNext()) break;
                 Participant thinker = thinkerIterator.next();
-                if (team.members.size() < teamSize && countGame(team.members, thinker.getPreferredGame()) < GAME_CAP) {
+                // *** CHANGE: Using Team.getMembers().size() and Team.getGameCount() ***
+                if (team.getMembers().size() < teamSize && team.getGameCount(thinker.getPreferredGame()) < GAME_CAP) {
                     team.addMember(thinker);
                     thinkerIterator.remove();
                     thinkersAssigned++;
@@ -130,22 +114,21 @@ public class TeamBuilder {
 
             // --- Multi-threaded Assignment using Parallel Stream ---
 
-            // This stream processes the assignment of 'remainingOthers' concurrently
-            // The synchronized block prevents race conditions when modifying shared TeamState objects.
             remainingOthers.parallelStream().forEach(p -> {
-                TeamState bestTeam = findBestTeamForParticipant(teamStates, p, overallAvg, teamSize);
+                // *** CHANGE: Passing List<Team> ***
+                Team bestTeam = findBestTeamForParticipant(teams, p, overallAvg, teamSize);
 
                 if (bestTeam != null) {
                     // Synchronize access to the specific team object being modified
                     synchronized (bestTeam) {
                         // Double-check condition inside the lock just in case another thread filled it
-                        if (bestTeam.members.size() < teamSize) {
+                        if (bestTeam.getMembers().size() < teamSize) {
                             bestTeam.addMember(p);
-                            logger.debug("Assigned participant " + p.getId() + " to team " + bestTeam.teamId);
+                            logger.debug("Assigned participant " + p.getId() + " to team " + bestTeam.getTeamId());
                         } else {
                             // If blocked and team is full, add to remaining list (needs synchronization)
                             remainingParticipants.add(p);
-                            logger.debug("Team " + bestTeam.teamId + " full, participant " + p.getId() + " added to remaining");
+                            logger.debug("Team " + bestTeam.getTeamId() + " full, participant " + p.getId() + " added to remaining");
                         }
                     }
                 } else {
@@ -159,18 +142,19 @@ public class TeamBuilder {
 
             List<List<Participant>> finalTeams = new ArrayList<>();
             int completeTeams = 0;
-            int incompleteParticipants = 0;
+            // int incompleteParticipants = 0; // Removed unnecessary variable
 
             // Collect results sequentially
-            for (TeamState team : teamStates) {
-                if (team.members.size() == teamSize) {
-                    finalTeams.add(new ArrayList<>(team.members));
+            // *** CHANGE: Iterating over List<Team> ***
+            for (Team team : teams) {
+                if (team.getMembers().size() == teamSize) {
+                    finalTeams.add(new ArrayList<>(team.getMembers()));
                     completeTeams++;
-                    logger.debug("Team " + team.teamId + " completed with " + team.members.size() + " members");
+                    logger.debug("Team " + team.getTeamId() + " completed with " + team.getMembers().size() + " members");
                 } else {
-                    remainingParticipants.addAll(team.members);
-                    incompleteParticipants += team.members.size();
-                    logger.debug("Team " + team.teamId + " incomplete with " + team.members.size() + " members, added to remaining");
+                    remainingParticipants.addAll(team.getMembers());
+                    // incompleteParticipants += team.getMembers().size(); // Removed
+                    logger.debug("Team " + team.getTeamId() + " incomplete with " + team.getMembers().size() + " members, added to remaining");
                 }
             }
 
@@ -193,7 +177,6 @@ public class TeamBuilder {
         }
     }
 
-    // formLeftoverTeams remains sequential for simplicity, but could also be updated
     public static List<List<Participant>> formLeftoverTeams(int teamSize) {
         logger.info("Starting leftover team formation");
 
@@ -212,7 +195,8 @@ public class TeamBuilder {
                     .orElse(0);
 
             int maxNewTeams = pool.size() / teamSize;
-            List<TeamState> newTeams = new ArrayList<>();
+            // *** CHANGE: Using model.Team instead of TeamState ***
+            List<Team> newTeams = new ArrayList<>();
             pool.sort(Comparator.comparingInt(TeamBuilder::safeSkill).reversed());
             List<Participant> tempPool = new ArrayList<>(pool);
             pool.clear();
@@ -221,10 +205,11 @@ public class TeamBuilder {
 
             for (int i = 0; i < maxNewTeams; i++) {
                 if (tempPool.isEmpty()) break;
-                TeamState state = new TeamState(newTeams.size() + 100);
-                state.addMember(tempPool.remove(0));
-                newTeams.add(state);
-                logger.debug("Created leftover team " + state.teamId + " with initial member");
+                // *** CHANGE: Using new Team(id) ***
+                Team team = new Team(newTeams.size() + 100);
+                team.addMember(tempPool.remove(0));
+                newTeams.add(team);
+                logger.debug("Created leftover team " + team.getTeamId() + " with initial member");
             }
             pool.addAll(tempPool);
             Collections.shuffle(pool, new Random());
@@ -232,13 +217,13 @@ public class TeamBuilder {
             List<Participant> unassigned = new ArrayList<>();
             int assignedCount = 0;
 
-            // Optional: Could use parallelStream here, but requires synchronization on newTeams elements
             for (Participant p : pool) {
-                TeamState bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
+                // *** CHANGE: Passing List<Team> ***
+                Team bestTeam = findBestLeftoverTeam(newTeams, p, poolAvgSkill, teamSize);
                 if (bestTeam != null) {
                     bestTeam.addMember(p);
                     assignedCount++;
-                    logger.debug("Assigned leftover participant " + p.getId() + " to team " + bestTeam.teamId);
+                    logger.debug("Assigned leftover participant " + p.getId() + " to team " + bestTeam.getTeamId());
                 } else {
                     unassigned.add(p);
                     logger.debug("No suitable leftover team for participant " + p.getId());
@@ -249,12 +234,13 @@ public class TeamBuilder {
             remainingParticipants.clear();
             int leftoverCompleteTeams = 0;
 
-            for (TeamState team : newTeams) {
-                if (team.members.size() == teamSize) {
-                    finalNewTeams.add(new ArrayList<>(team.members));
+            // *** CHANGE: Iterating over List<Team> ***
+            for (Team team : newTeams) {
+                if (team.getMembers().size() == teamSize) {
+                    finalNewTeams.add(new ArrayList<>(team.getMembers()));
                     leftoverCompleteTeams++;
                 } else {
-                    remainingParticipants.addAll(team.members);
+                    remainingParticipants.addAll(team.getMembers());
                 }
             }
             remainingParticipants.addAll(unassigned);
@@ -275,26 +261,31 @@ public class TeamBuilder {
         }
     }
 
-    private static TeamState findBestTeamForParticipant(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {
+    // *** CHANGE: Method now accepts List<Team> ***
+    private static Team findBestTeamForParticipant(List<Team> teams, Participant p, double overallAvg, int teamSize) {
         if (p == null) return null;
 
         String pRole = safeRole(p);
-        List<TeamState> validTeams = new ArrayList<>();
+        String pGame = safeGame(p);
+        List<Team> validTeams = new ArrayList<>();
         double minDiff = Double.MAX_VALUE;
 
         try {
-            for (TeamState team : teamStates) {
+            // *** CHANGE: Iterating over List<Team> ***
+            for (Team team : teams) {
                 // Read operations are safe without synchronization
-                if (team.members.size() >= teamSize) continue;
-                if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
-                if (pRole.equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
+                if (team.getMembers().size() >= teamSize) continue;
 
-                Map<String, Integer> roles = team.roleCounts;
-                int uniqueRoles = roles.size();
-                boolean addsNewRole = !roles.containsKey(pRole);
+                // *** CHANGE: Using new Team methods ***
+                if (team.getGameCount(pGame) >= GAME_CAP) continue;
+                if (pRole.equals("thinker") && team.getRoleCount("thinker") >= MAX_THINKERS) continue;
+
+                int uniqueRoles = team.getUniqueRoleCount();
+                boolean addsNewRole = team.getRoleCount(pRole) == 0;
+
                 if (!addsNewRole && uniqueRoles >= MIN_UNIQUE_ROLES && (pRole.equals("leader") || pRole.equals("thinker"))) continue;
 
-                double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
+                double newAvg = (double) (team.getTotalSkill() + safeSkill(p)) / (team.getMembers().size() + 1);
                 double diff = Math.abs(newAvg - overallAvg);
 
                 // Find the team(s) with the minimum difference
@@ -317,19 +308,25 @@ public class TeamBuilder {
         return null;
     }
 
-    private static TeamState findBestLeftoverTeam(List<TeamState> teamStates, Participant p, double overallAvg, int teamSize) {
+    // *** CHANGE: Method now accepts List<Team> ***
+    private static Team findBestLeftoverTeam(List<Team> teams, Participant p, double overallAvg, int teamSize) {
         if (p == null) return null;
 
-        List<TeamState> validTeams = new ArrayList<>();
+        String pRole = safeRole(p);
+        String pGame = safeGame(p);
+        List<Team> validTeams = new ArrayList<>();
         double minDiff = Double.MAX_VALUE;
 
         try {
-            for (TeamState team : teamStates) {
-                if (team.members.size() >= teamSize) continue;
-                if (countGame(team.members, p.getPreferredGame()) >= GAME_CAP) continue;
-                if (safeRole(p).equals("thinker") && team.roleCounts.getOrDefault("thinker", 0) >= MAX_THINKERS) continue;
+            // *** CHANGE: Iterating over List<Team> ***
+            for (Team team : teams) {
+                if (team.getMembers().size() >= teamSize) continue;
 
-                double newAvg = (double) (team.skillTotal + safeSkill(p)) / (team.members.size() + 1);
+                // *** CHANGE: Using new Team methods ***
+                if (team.getGameCount(pGame) >= GAME_CAP) continue;
+                if (pRole.equals("thinker") && team.getRoleCount("thinker") >= MAX_THINKERS) continue;
+
+                double newAvg = (double) (team.getTotalSkill() + safeSkill(p)) / (team.getMembers().size() + 1);
                 double diff = Math.abs(newAvg - overallAvg);
 
                 if (diff < minDiff) {
@@ -348,17 +345,17 @@ public class TeamBuilder {
         return null;
     }
 
-    private static int countGame(List<Participant> team, String game) {
-        if (game == null) return 0;
-        int count = 0;
-        for (Participant p : team)
-            if (p.getPreferredGame() != null && p.getPreferredGame().equalsIgnoreCase(game)) count++;
-        return count;
-    }
+    // *** REMOVED: private static int countGame(...) helper method ***
 
     public static List<Participant> getRemainingParticipants() {
         logger.debug("Retrieving remaining participants: " + remainingParticipants.size());
         return new ArrayList<>(remainingParticipants);
+    }
+
+    // Helper to safely get the lower-cased game string
+    private static String safeGame(Participant p) {
+        if (p == null || p.getPreferredGame() == null) return "unknown";
+        return p.getPreferredGame().toLowerCase();
     }
 
     private static String safeRole(Participant p) {

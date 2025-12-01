@@ -1,19 +1,23 @@
 package cli;
 
 import model.Participant;
-import service.*;
+import model.Team; // Keep import for potential future use with a refined Team model
+import service.CSVMerger;
+import service.FileHandler;
+import service.TeamBuilder;
 import utility.LoggerService;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class TeamFormationHandler {
     private static final LoggerService logger = LoggerService.getInstance();
-    private Scanner scanner;
+    private final Scanner scanner;
     private String uploadedFilePath;
-    private String teamsOutputPath;
+    private final String teamsOutputPath; // Unused in this file, but kept for context
 
     public TeamFormationHandler(Scanner scanner, String uploadedFilePath, String teamsOutputPath) {
         this.scanner = scanner;
@@ -22,21 +26,17 @@ public class TeamFormationHandler {
     }
 
     public TeamFormationResult handleTeamFormation() {
-        // Check if we have uploaded file
         if (uploadedFilePath == null) {
             System.out.println("No file uploaded. Please upload a CSV first.");
             return null;
         }
 
-        // ENHANCED MERGE FUNCTIONALITY
         System.out.println("\n" + "=".repeat(60));
         System.out.println(" DATA MERGE OPTIONS");
         System.out.println("=".repeat(60));
-
-        int newParticipantsCount = CSVMerger.getNewParticipantsCount();
         System.out.println(" Current Status:");
         System.out.println("   - Organizer file: " + uploadedFilePath);
-        System.out.println("   - New participants waiting: " + newParticipantsCount);
+        System.out.println("   - New participants waiting: " + CSVMerger.getNewParticipantsCount());
 
         System.out.print("\nDo you want to merge additional data? (yes/no): ");
         String mergeChoice = scanner.nextLine().trim().toLowerCase();
@@ -47,7 +47,6 @@ public class TeamFormationHandler {
             return null;
         }
 
-        // TEAM SIZE INPUT
         int teamSize = getTeamSize(workingParticipants);
         if (teamSize <= 0) return null;
 
@@ -55,22 +54,20 @@ public class TeamFormationHandler {
     }
 
     private List<Participant> handleEnhancedMergeChoice(String mergeChoice) {
-        List<Participant> workingParticipants = new ArrayList<>();
-
+        List<Participant> workingParticipants;
         if (mergeChoice.equals("yes") || mergeChoice.equals("y")) {
             try {
-                // Create merged file on Desktop
                 String desktopPath = System.getProperty("user.home") + File.separator + "Desktop";
                 String timestamp = String.valueOf(System.currentTimeMillis());
                 String tempMergedPath = desktopPath + File.separator + "merged_participants_" + timestamp + ".csv";
 
-                logger.info("Starting simple merge process");
+                logger.info("Starting merge process. Merged file path: " + tempMergedPath);
                 System.out.println("\n Starting merge process...");
                 System.out.println(" Merged file will be saved to: " + tempMergedPath);
 
                 workingParticipants = CSVMerger.mergeWithOptions(uploadedFilePath, tempMergedPath, scanner);
 
-                uploadedFilePath = tempMergedPath; // Update to use merged file
+                uploadedFilePath = tempMergedPath;
                 logger.info("Merge completed. Total participants: " + workingParticipants.size());
                 System.out.println(" Merge completed! Total participants: " + workingParticipants.size());
 
@@ -81,11 +78,11 @@ public class TeamFormationHandler {
                 workingParticipants = loadOrganizerFileOnly();
             }
         } else {
-            // Load without merging
             workingParticipants = loadOrganizerFileOnly();
         }
         return workingParticipants;
     }
+
     private List<Participant> loadOrganizerFileOnly() {
         try {
             List<Participant> participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
@@ -110,7 +107,6 @@ public class TeamFormationHandler {
             int teamSize = scanner.nextInt();
             scanner.nextLine();
 
-            // Validate team size
             if (teamSize <= 0) {
                 System.out.println("Team size must be greater than 0.");
                 return -1;
@@ -131,144 +127,158 @@ public class TeamFormationHandler {
         }
     }
 
-    private TeamFormationResult performTeamFormation(List<Participant> workingParticipants, int teamSize) {
-        List<List<Participant>> teams = null;
-        List<Participant> remainingPool = new ArrayList<>();
+    // ============================================================
+    //              CLEANED TEAM FORMATION LOGIC
+    // ============================================================
 
+    private TeamFormationResult performTeamFormation(List<Participant> workingParticipants, int teamSize) {
+
+        List<List<Participant>> finalTeams = new ArrayList<>();
+        List<Participant> rearrangementPool = workingParticipants;
         boolean arranging = true;
+
         while (arranging) {
             try {
-                logger.info("Starting team formation with " + workingParticipants.size() + " participants, team size: " + teamSize);
-                System.out.println("\nForming teams with " + workingParticipants.size() + " participants...");
+                logger.info("Attempting formation with " + rearrangementPool.size() + " participants, size: " + teamSize);
+                System.out.println("\nForming teams with " + rearrangementPool.size() + " participants...");
 
-                teams = TeamBuilder.formTeams(workingParticipants, teamSize);
-                remainingPool = TeamBuilder.getRemainingParticipants();
+                // 1. MAIN TEAM FORMATION
+                List<List<Participant>> mainTeams = TeamBuilder.formTeams(rearrangementPool, teamSize);
+                List<Participant> remainingPool = TeamBuilder.getRemainingParticipants(); // Static state retrieved
 
-                // DISPLAY MAIN TEAMS
-                System.out.println("\n ================== MAIN TEAMS ==================");
-                if (teams.isEmpty()) {
-                    System.out.println("No complete teams could be formed with current constraints.");
-                } else {
-                    for (int i = 0; i < teams.size(); i++) {
-                        System.out.println("\n--------------------------------------------------------------------------------------------------------------------------");
-                        System.out.println("\n======= TEAM " + (i + 1) + " =======");
-                        List<Participant> currentTeam = teams.get(i);
-                        double teamAvgSkill = currentTeam.stream()
-                                .mapToInt(Participant::getSkillLevel)
-                                .average()
-                                .orElse(0.0);
-
-                        // Count roles and personalities for diversity info
-                        long leaderCount = currentTeam.stream()
-                                .filter(p -> p.getPersonalityType().name().equals("LEADER"))
-                                .count();
-                        long thinkerCount = currentTeam.stream()
-                                .filter(p -> p.getPersonalityType().name().equals("THINKER"))
-                                .count();
-
-                        System.out.printf(" Average Skill: %.2f | Size: %d | Leaders: %d | Thinkers: %d\n",
-                                teamAvgSkill, currentTeam.size(), leaderCount, thinkerCount);
-
-                        for (Participant p : currentTeam) {
-                            System.out.println("  " + p.getId() + " | " + p.getName() +
-                                    " | " + p.getPreferredRole() +
-                                    " | Skill: " + p.getSkillLevel() +
-                                    " | " + p.getPersonalityType());
-                        }
-                    }
-                }
-
-                // HANDLE LEFTOVER PARTICIPANTS
+                // 2. LEFTOVER TEAM FORMATION
                 List<List<Participant>> leftoverTeams = new ArrayList<>();
                 if (!remainingPool.isEmpty()) {
                     logger.info("Forming leftover teams from " + remainingPool.size() + " participants");
-                    System.out.println("\nForming teams from " + remainingPool.size() + " leftover participants...");
+                    System.out.println("\nAttempting to form leftover teams from " + remainingPool.size() + " participants...");
                     leftoverTeams = TeamBuilder.formLeftoverTeams(teamSize);
-                    remainingPool = TeamBuilder.getRemainingParticipants();
-
-                    if (!leftoverTeams.isEmpty()) {
-                        System.out.println("\nFORMING LEFTOVER TEAMS - Note: No strict rules followed in leftover team formation");
-                        System.out.println("\n===================== LEFTOVER TEAMS ======================");
-                        int offset = teams.size();
-                        for (int i = 0; i < leftoverTeams.size(); i++) {
-                            System.out.println("\n======== TEAM " + (offset + i + 1) + " ========");
-                            List<Participant> currentLeftoverTeam = leftoverTeams.get(i);
-                            double teamAvgSkill = currentLeftoverTeam.stream()
-                                    .mapToInt(Participant::getSkillLevel)
-                                    .average()
-                                    .orElse(0.0);
-
-                            System.out.printf("Average Skill: %.2f | Size: %d\n",
-                                    teamAvgSkill, currentLeftoverTeam.size());
-
-                            for (Participant p : currentLeftoverTeam) {
-                                System.out.println("  " + p.getId() + " | " + p.getName() +
-                                        " | " + p.getPreferredRole() +
-                                        " | Skill: " + p.getSkillLevel() +
-                                        " | " + p.getPersonalityType());
-                            }
-                        }
-                    }
+                    remainingPool = TeamBuilder.getRemainingParticipants(); // Static state updated
                 }
 
-                // DISPLAY REMAINING UNASSIGNED PARTICIPANTS
-                if (!remainingPool.isEmpty()) {
-                    logger.info(remainingPool.size() + " participants remaining unassigned");
-                    System.out.println("\n================== REMAINING UNASSIGNED PARTICIPANTS ==================");
-                    System.out.println("Count: " + remainingPool.size());
-                    for (Participant p : remainingPool) {
-                        System.out.println("  " + p.getId() + " | " + p.getName() +
-                                " | " + p.getEmail() +
-                                " | " + p.getPreferredGame() +
-                                " | Skill: " + p.getSkillLevel());
-                    }
-                }
+                // 3. DISPLAY RESULTS (Using helper method)
+                displayFormationResults(mainTeams, leftoverTeams, remainingPool, finalTeams.size());
 
-                // REARRANGEMENT OPTION
+                // 4. REARRANGE OPTION
                 System.out.println("\n" + "=".repeat(50));
-                System.out.print("Do you want to rearrange teams? (yes/no): ");
+                System.out.print("Do you want to **rearrange all participants** to try for a better result? (yes/no): ");
                 String rearrange = scanner.nextLine().trim().toLowerCase();
-                if (rearrange.equals("yes") || rearrange.equals("y")) {
-                    // Collect all participants back for rearrangement
-                    workingParticipants = new ArrayList<>();
-                    for (List<Participant> t : teams) workingParticipants.addAll(t);
-                    for (List<Participant> t : leftoverTeams) workingParticipants.addAll(t);
-                    workingParticipants.addAll(remainingPool);
 
-                    // Clear current team data
-                    teams.clear();
-                    leftoverTeams.clear();
-                    remainingPool.clear();
+                if (rearrange.equals("yes") || rearrange.equals("y")) {
+                    rearrangementPool = new ArrayList<>();
+                    rearrangementPool.addAll(mainTeams.stream().flatMap(List::stream).collect(Collectors.toList()));
+                    rearrangementPool.addAll(leftoverTeams.stream().flatMap(List::stream).collect(Collectors.toList()));
+                    rearrangementPool.addAll(remainingPool);
+
+                    // Crucial: Clear static list before the next TeamBuilder run
                     TeamBuilder.getRemainingParticipants().clear();
 
-                    logger.info("Rearranging teams with " + workingParticipants.size() + " participants");
-                    System.out.println("\n Rearranging teams with " + workingParticipants.size() + " participants...\n");
+                    logger.info("Rearranging teams with " + rearrangementPool.size() + " participants");
+                    System.out.println("\n Rearranging teams with " + rearrangementPool.size() + " participants...\n");
+                    // Continue loop
                 } else {
-                    // Combine main teams and leftover teams
-                    if (leftoverTeams != null && !leftoverTeams.isEmpty()) {
-                        teams.addAll(leftoverTeams);
-                    }
+                    finalTeams.addAll(mainTeams);
+                    finalTeams.addAll(leftoverTeams);
+
+                    // Set final remaining pool before exiting
+                    rearrangementPool = remainingPool;
                     arranging = false;
 
                     // Show final summary
-                    logger.info("Team formation completed. Total teams: " + teams.size() + ", remaining: " + remainingPool.size());
+                    logger.info("Team formation completed. Total teams: " + finalTeams.size() + ", remaining: " + rearrangementPool.size());
                     System.out.println("\n" + "=".repeat(60));
                     System.out.println("TEAM FORMATION COMPLETED SUCCESSFULLY!");
                     System.out.println("=".repeat(60));
-                    System.out.println("Total teams formed: " + teams.size());
-                    System.out.println("Total participants in teams: " + teams.stream().mapToInt(List::size).sum());
-                    System.out.println(" Remaining unassigned: " + remainingPool.size());
+                    System.out.println("Total teams formed: " + finalTeams.size());
+                    System.out.println("Total participants in teams: " + finalTeams.stream().mapToInt(List::size).sum());
+                    System.out.println(" Remaining unassigned: " + rearrangementPool.size());
                     System.out.println(" Total participants processed: " + workingParticipants.size());
                 }
 
             } catch (Exception e) {
                 logger.error("Error forming teams", e);
                 System.out.println(" Error forming teams: " + e.getMessage());
-                e.printStackTrace();
                 arranging = false;
             }
         }
 
-        return new TeamFormationResult(teams, remainingPool, uploadedFilePath);
+        return new TeamFormationResult(finalTeams, rearrangementPool, uploadedFilePath);
+    }
+
+    /**
+     * Helper method to handle console output for formation results.
+     * Combines the structure of the old code with the detailed content of the new code.
+     */
+    private void displayFormationResults(List<List<Participant>> mainTeams, List<List<Participant>> leftoverTeams, List<Participant> remainingPool, int offset) {
+
+        // 1. MAIN TEAMS
+        System.out.println("\n ================== MAIN TEAMS ==================");
+        if (mainTeams.isEmpty()) {
+            System.out.println("No complete teams could be formed with current constraints.");
+        } else {
+            for (int i = 0; i < mainTeams.size(); i++) {
+                List<Participant> currentTeam = mainTeams.get(i);
+                double teamAvgSkill = currentTeam.stream()
+                        .mapToInt(Participant::getSkillLevel)
+                        .average()
+                        .orElse(0.0);
+
+                // Count roles and personalities for diversity info (from the "new code")
+                long leaderCount = currentTeam.stream()
+                        .filter(p -> p.getPersonalityType().name().equals("LEADER"))
+                        .count();
+                long thinkerCount = currentTeam.stream()
+                        .filter(p -> p.getPersonalityType().name().equals("THINKER"))
+                        .count();
+
+                System.out.println("\n--------------------------------------------------------------------------------------------------------------------------");
+                System.out.println("\n======= TEAM " + (i + 1 + offset) + " =======");
+                System.out.printf(" Average Skill: %.2f | Size: %d | Leaders: %d | Thinkers: %d\n",
+                        teamAvgSkill, currentTeam.size(), leaderCount, thinkerCount);
+
+                for (Participant p : currentTeam) {
+                    System.out.println("  " + p.getId() + " | " + p.getName() +
+                            " | " + p.getPreferredRole() +
+                            " | Skill: " + p.getSkillLevel() +
+                            " | " + p.getPersonalityType());
+                }
+            }
+        }
+
+        // 2. LEFTOVER TEAMS
+        if (!leftoverTeams.isEmpty()) {
+            System.out.println("\nFORMING LEFTOVER TEAMS - Note: No strict rules followed in leftover team formation");
+            System.out.println("\n===================== LEFTOVER TEAMS ======================");
+            int mainTeamSize = mainTeams.size();
+            for (int i = 0; i < leftoverTeams.size(); i++) {
+                List<Participant> currentLeftoverTeam = leftoverTeams.get(i);
+                double teamAvgSkill = currentLeftoverTeam.stream()
+                        .mapToInt(Participant::getSkillLevel)
+                        .average()
+                        .orElse(0.0);
+
+                System.out.println("\n======== TEAM " + (mainTeamSize + i + 1 + offset) + " ========");
+                System.out.printf("Average Skill: %.2f | Size: %d\n",
+                        teamAvgSkill, currentLeftoverTeam.size());
+
+                for (Participant p : currentLeftoverTeam) {
+                    System.out.println("  " + p.getId() + " | " + p.getName() +
+                            " | " + p.getPreferredRole() +
+                            " | Skill: " + p.getSkillLevel() +
+                            " | " + p.getPersonalityType());
+                }
+            }
+        }
+
+        // 3. UNASSIGNED PARTICIPANTS
+        if (!remainingPool.isEmpty()) {
+            System.out.println("\n================== REMAINING UNASSIGNED PARTICIPANTS ==================");
+            System.out.println("Count: " + remainingPool.size());
+            for (Participant p : remainingPool) {
+                System.out.println("  " + p.getId() + " | " + p.getName() +
+                        " | " + p.getEmail() +
+                        " | " + p.getPreferredGame() +
+                        " | Skill: " + p.getSkillLevel());
+            }
+        }
     }
 }

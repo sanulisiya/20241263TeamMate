@@ -1,25 +1,52 @@
 package model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Team {
-    private int teamId;
-    private List<Participant> members;
-    private int totalSkill;
-    private double avgSkill;
+    private final int teamId;
+    private final List<Participant> members = new ArrayList<>();
+    private int totalSkill = 0;
 
-    // Constructor
+    // --- NEW CACHING FIELDS ---
+    // Role counts (e.g., "leader": 1, "thinker": 2)
+    private final Map<String, Integer> roleCounts = new HashMap<>();
+    // Game counts (e.g., "valorant": 3, "league of legends": 1)
+    private final Map<String, Integer> gameCounts = new HashMap<>();
+    // --------------------------
+
     public Team(int teamId) {
         this.teamId = teamId;
-        this.members = new ArrayList<>();
-        this.totalSkill = 0;
-        this.avgSkill = 0.0;
     }
 
+    // Add member and update skill and cached counts
+    public void addMember(Participant p) {
+        if (p == null) return;
 
+        members.add(p);
+        totalSkill += p.getSkillLevel();
 
-    // Getters
+        // Update cached role count
+        String role = safeRole(p);
+        roleCounts.merge(role, 1, Integer::sum);
+
+        // Update cached game count
+        String game = safeGame(p);
+        gameCounts.merge(game, 1, Integer::sum);
+    }
+
+    // Helper to safely get the lower-cased role string
+    private String safeRole(Participant p) {
+        if (p == null || p.getPersonalityType() == null) return "unknown";
+        return p.getPersonalityType().toString().toLowerCase();
+    }
+
+    // Helper to safely get the lower-cased game string
+    private String safeGame(Participant p) {
+        if (p == null || p.getPreferredGame() == null) return "unknown";
+        return p.getPreferredGame().toLowerCase();
+    }
+
     public int getTeamId() {
         return teamId;
     }
@@ -28,71 +55,52 @@ public class Team {
         return members;
     }
 
-    public double getAvgSkill() {
-        return avgSkill;
-    }
-
     public int getTotalSkill() {
         return totalSkill;
     }
 
-    // Count how many members have the same game
-    public long countGame(String game) {
-        return members.stream()
-                .filter(p -> p.getPreferredGame().equalsIgnoreCase(game))
-                .count();
+    public double getAverageSkill() {
+        return members.isEmpty() ? 0 : (double) totalSkill / members.size();
     }
 
-    // Count how many members have the same role
-    public long countRole(RoleType role) {
-        return members.stream()
-                .filter(p -> p.getPreferredRole().equals(role))
-                .count();
+    // --- NEW METHODS FOR TEAMBUILDER EFFICIENCY ---
+
+    /**
+     * Retrieves the cached count of participants with a specific role.
+     * @param role The role type (e.g., "leader", "thinker")
+     * @return The count of members with that role.
+     */
+    public int getRoleCount(String role) {
+        return roleCounts.getOrDefault(role.toLowerCase(), 0);
     }
 
-    // Calculate average compatibility score with a new member
-    public double calculateCompatibility(Participant newMember) {
-        if (members.isEmpty()) return 100.0;
-
-        double total = 0;
-        for (Participant p : members) {
-            total += p.calculateCompatibility(newMember);
-        }
-        return total / members.size();
+    /**
+     * Retrieves the cached count of participants who prefer a specific game.
+     * @param game The preferred game string.
+     * @return The count of members who prefer that game.
+     */
+    public int getGameCount(String game) {
+        return gameCounts.getOrDefault(game.toLowerCase(), 0);
     }
 
-    // Diversity bonus (adds value if new member adds variety)
-    public double calculateDiversityBonus(Participant newMember) {
-        boolean hasSameGame = members.stream()
-                .anyMatch(p -> p.getPreferredGame().equalsIgnoreCase(newMember.getPreferredGame()));
-        boolean hasSameRole = members.stream()
-                .anyMatch(p -> p.getPreferredRole().equalsIgnoreCase(newMember.getPreferredRole()));
-        boolean hasSamePersonality = members.stream()
-                .anyMatch(p -> p.getPersonalityType().equals(newMember.getPersonalityType()));
-
-        double bonus = 0;
-        if (!hasSameGame) bonus += 30;
-        if (!hasSameRole) bonus += 30;
-        if (!hasSamePersonality) bonus += 40;
-
-        return bonus; // max 100
+    /**
+     * Returns the number of unique roles currently on the team.
+     * @return The size of the roleCounts map.
+     */
+    public int getUniqueRoleCount() {
+        return roleCounts.size();
     }
 
-    // Helper: team size
-    public int size() {
-        return members.size();
-    }
-
-    // Pretty print team info
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("Team " + teamId + " (Avg Skill: " + String.format("%.2f", avgSkill) + ")\n");
-        for (Participant p : members) {
-            sb.append("  - ").append(p.toString()).append("\n");
-        }
-        return sb.toString();
+        return String.format(
+                "Team %d | Size: %d | Avg Skill: %.2f | Members: %s",
+                teamId,
+                members.size(),
+                getAverageSkill(),
+                members.stream()
+                        .map(Participant::getName)
+                        .collect(Collectors.joining(", "))
+        );
     }
-
-
-
 }

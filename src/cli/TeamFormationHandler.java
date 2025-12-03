@@ -17,7 +17,7 @@ public class TeamFormationHandler {
     private static final LoggerService logger = LoggerService.getInstance();
     private final Scanner scanner;
     private String uploadedFilePath;
-    private final String teamsOutputPath; // Unused in this file, but kept for context
+    private final String teamsOutputPath;
 
     public TeamFormationHandler(Scanner scanner, String uploadedFilePath, String teamsOutputPath) {
         this.scanner = scanner;
@@ -169,7 +169,7 @@ public class TeamFormationHandler {
                     rearrangementPool.addAll(leftoverTeams.stream().flatMap(List::stream).collect(Collectors.toList()));
                     rearrangementPool.addAll(remainingPool);
 
-                    // Crucial: Clear static list before the next TeamBuilder run
+                    // Clear static list before the next TeamBuilder run
                     TeamBuilder.getRemainingParticipants().clear();
 
                     logger.info("Rearranging teams with " + rearrangementPool.size() + " participants");
@@ -204,10 +204,7 @@ public class TeamFormationHandler {
         return new TeamFormationResult(finalTeams, rearrangementPool, uploadedFilePath);
     }
 
-    /**
-     * Helper method to handle console output for formation results.
-     * Combines the structure of the old code with the detailed content of the new code.
-     */
+    //Helper method to handle console output for formation results.
     private void displayFormationResults(List<List<Participant>> mainTeams, List<List<Participant>> leftoverTeams, List<Participant> remainingPool, int offset) {
 
         // 1. MAIN TEAMS

@@ -21,8 +21,4 @@ public class TeamFormationException extends RuntimeException {
         super(message, cause);
         this.errorCode = errorCode;
     }
-
-    public String getErrorCode() {
-        return errorCode;
-    }
 }

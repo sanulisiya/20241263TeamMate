@@ -20,11 +20,4 @@ public class FileOperationException extends RuntimeException {
         this.operation = operation;
     }
 
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public String getOperation() {
-        return operation;
-    }
 }

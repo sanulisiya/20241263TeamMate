@@ -129,41 +129,6 @@ public class Participant {
         this.email = email.trim();
     }
 
-//    public void setPreferredGame(String preferredGame) {
-////        this.preferredGame = (preferredGame != null) ? preferredGame.trim() : "";
-////    }
-//
-//    public void setSkillLevel(int skillLevel) {
-//        if (skillLevel < 1 || skillLevel > 10) {
-//            throw new ParticipantValidationException("Skill level must be between 1 and 10", "SkillLevel", String.valueOf(skillLevel));
-//        }
-//        this.skillLevel = skillLevel;
-//    }
-//
-//    public void setPreferredRole(RoleType preferredRole) {
-//        if (preferredRole == null) {
-//            throw new ParticipantValidationException("Preferred role cannot be null", "PreferredRole", "null");
-//        }
-//        this.preferredRole = preferredRole;
-//    }
-//
-//    public void setPersonalityScore(int personalityScore) {
-//        if (personalityScore < 0 || personalityScore > 100) {
-//            throw new ParticipantValidationException("Personality score must be between 0 and 100", "PersonalityScore", String.valueOf(personalityScore));
-//        }
-//        this.personalityScore = personalityScore;
-//    }
-//
-//    public void setPersonalityType(PersonalityType personalityType) {
-//        if (personalityType == null) {
-//            throw new ParticipantValidationException("Personality type cannot be null", "PersonalityType", "null");
-//        }
-//        this.personalityType = personalityType;
-//    }
-//
-//    public void setAvailability(String availability) {
-//        this.availability = (availability != null) ? availability.trim() : null;
-//    }
 
     public void setTeamNumber(String teamNumber) {
         this.teamNumber = (teamNumber != null) ? teamNumber.trim() : "";

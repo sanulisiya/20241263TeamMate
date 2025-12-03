@@ -83,10 +83,9 @@ public class Team {
         return gameCounts.getOrDefault(game.toLowerCase(), 0);
     }
 
-    /**
-     * Returns the number of unique roles currently on the team.
-     * @return The size of the roleCounts map.
-     */
+
+    // Returns the number of unique roles currently on the team.
+
     public int getUniqueRoleCount() {
         return roleCounts.size();
     }

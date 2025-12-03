@@ -255,4 +255,12 @@ public class TeamBuilder {
     private static int safeSkill(Participant p) {
         return (p == null) ? 0 : p.getSkillLevel();
     }
+    public static List<List<Participant>> formTeamsWithAbstractAlgorithm(List<Participant> participants, int teamSize) {
+        // Using abstract class - polymorphism
+        TeamFormationAlgorithm algorithm = new BalancedTeamAlgorithm();
+
+        // This calls the overridden method in BalancedTeamAlgorithm
+        return algorithm.formTeams(participants, teamSize);
+    }
+
 }

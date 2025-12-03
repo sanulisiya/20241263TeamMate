@@ -6,16 +6,7 @@ public enum PersonalityType {
     BALANCED,
     MOTIVATOR;
 
-    /**
-     * Safely converts any string (even with descriptions inside parentheses)
-     * into a valid PersonalityType enum.
-     *
-     * Examples:
-     *  "LEADER (Confident)"  → LEADER
-     *  "thinker(observant)"  → THINKER
-     *  "Balanced"            → BALANCED
-     *  "MOTIVATOR (Positive)" → MOTIVATOR
-     */
+
     public static PersonalityType fromString(String typeString) {
         if (typeString == null || typeString.trim().isEmpty()) {
             return PersonalityType.BALANCED; // default

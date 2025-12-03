@@ -1,27 +1,29 @@
 package cli;
 
 import model.Participant;
-import service.*;
+import core.TeamFormationSystem;
 import utility.LoggerService;
 import java.util.*;
-
 
 public class OrganizerCLI {
     //Logger for system
     private static final LoggerService logger = LoggerService.getInstance();
     private static final String ORGANIZER_PIN = "1234";
 
-    private Scanner scanner;
+    private final Scanner scanner;
     private String currentUploadedFilePath;
     private String teamsOutputPath;
+
+    // *** Dependency Injection ***
+    private final TeamFormationSystem system;
 
     private List<Participant> participants;
     private List<List<Participant>> teams;
     private List<Participant> remainingPool;
     private String updatedFilePath;
 
-    //Constructor initializes fields
-    public OrganizerCLI(Scanner scanner, String currentUploadedFilePath, String teamsOutputPath) {
+    // Constructor initializes fields and accepts the injected system
+    public OrganizerCLI(Scanner scanner, String currentUploadedFilePath, String teamsOutputPath, TeamFormationSystem system) {
         this.scanner = scanner;
         this.currentUploadedFilePath = currentUploadedFilePath;
         this.teamsOutputPath = teamsOutputPath;
@@ -29,6 +31,7 @@ public class OrganizerCLI {
         this.teams = null;
         this.remainingPool = new ArrayList<>();
         this.updatedFilePath = currentUploadedFilePath;
+        this.system = system; // Initializing the injected dependency
     }
 
     public boolean authenticate() {
@@ -41,13 +44,10 @@ public class OrganizerCLI {
             return false;
         }
 
-        //Authenticates organizer using a PIN
-
         System.out.println("\n PIN Verified  Access Granted.");
         logger.info("Organizer PIN verified successfully");
         return true;
     }
-    //Main menu loop for organizer operations.
 
     public void showMenu() {
         boolean organizerRunning = true;
@@ -93,19 +93,20 @@ public class OrganizerCLI {
             }
         }
     }
-    //Loads a CSV file of participants using FileHandler.
+
+    // Loads a CSV file of participants using the system interface.
     private void handleUploadCSV() {
         System.out.print("\nEnter CSV File Path: ");
         String path = scanner.nextLine();
         try {
-            participants = FileHandler.loadParticipantsSingleThread(path);
+            // *** Use system.loadParticipants ***
+            participants = system.loadParticipants(path);
             if (participants != null && !participants.isEmpty()) {
                 updatedFilePath = path;
                 logger.info("CSV uploaded successfully: " + path + " with " + participants.size() + " participants");
                 System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
                 System.out.println("This file will now be used for participant login verification.");
 
-                // Display sample of loaded participants
                 System.out.println("\nSample of loaded participants:");
                 for (int i = 0; i < Math.min(3, participants.size()); i++) {
                     System.out.println("  " + participants.get(i));
@@ -119,8 +120,8 @@ public class OrganizerCLI {
             System.out.println("Error uploading CSV: " + e.getMessage());
         }
     }
-//Displays all participants loaded from the currently active CSV file.
 
+    // Displays all participants loaded from the currently active CSV file.
     private void handleViewParticipants() {
         if (updatedFilePath == null && participants.isEmpty()) {
             System.out.println("No file uploaded. Please upload a CSV first.");
@@ -129,7 +130,8 @@ public class OrganizerCLI {
 
         try {
             if (updatedFilePath != null) {
-                participants = FileHandler.loadParticipantsSingleThread(updatedFilePath);
+                // *** Use system.loadParticipants ***
+                participants = system.loadParticipants(updatedFilePath);
             }
             logger.info("Viewing all participants from: " + updatedFilePath);
             System.out.println("\n----- PARTICIPANT LIST -----");
@@ -143,14 +145,14 @@ public class OrganizerCLI {
             System.out.println("Error loading participants: " + e.getMessage());
         }
     }
-//Triggers team formation through TeamFormationHandler.
 
+    // Triggers team formation through TeamFormationHandler.
     private void handleTeamFormation() {
         if (updatedFilePath == null) {
             System.out.println("No file uploaded. Upload CSV first.");
             return;
         }
-// Delegate the logic to TeamFormationHandler
+        // *** Inject the system instance into the handler ***
         TeamFormationHandler teamFormationHandler = new TeamFormationHandler(scanner, updatedFilePath, teamsOutputPath);
         TeamFormationResult result = teamFormationHandler.handleTeamFormation();
 
@@ -160,7 +162,8 @@ public class OrganizerCLI {
             this.updatedFilePath = result.getUpdatedFilePath();
         }
     }
-    //Saves currently formed teams into a CSV file chosen by the organizer.
+
+    // Saves currently formed teams into a CSV file using the system interface.
     private void handleSaveTeams() {
         if (teams == null || teams.isEmpty()) {
             System.out.println("Teams not formed yet. Please form teams first (Option 3).");
@@ -177,13 +180,13 @@ public class OrganizerCLI {
             return;
         }
 
-        // Ensure file ends with .csv
         if (!userPath.toLowerCase().endsWith(".csv")) {
             userPath = userPath + ".csv";
         }
 
         try {
-            TeamFileHandler.saveTeamsToCSV(teams, userPath);
+            // *** Use system.saveTeams ***
+            system.saveTeams(teams, userPath);
             teamsOutputPath = userPath;
             logger.info("Teams saved successfully to: " + teamsOutputPath);
             System.out.println("\n Teams successfully saved!");
@@ -195,6 +198,7 @@ public class OrganizerCLI {
             System.out.println(" Error saving teams: " + e.getMessage());
         }
     }
+
     private int getIntInput() {
         try {
             int input = scanner.nextInt();
@@ -206,7 +210,6 @@ public class OrganizerCLI {
         }
     }
 
-    // Getters for main class to access updated state
     public String getCurrentUploadedFilePath() {
         return updatedFilePath;
     }

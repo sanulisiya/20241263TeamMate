@@ -27,27 +27,50 @@ public class ParticipantCreator {
 
             // ---------------- ID Input ----------------
             String id;
-            boolean idExists;
+            boolean idExists = false;
+            int invalidAttempts = 0;
             do {
-                id = getNonEmptyInput(sc, "Enter Participant ID (e.g., P001, P10, P100): ");
+                System.out.print("Enter Participant ID (e.g., P001, P10, P100) o: ");
+                id = sc.nextLine().trim();
 
                 // Validate ID format
                 if (!ParticipantValidator.validateId(id)) {
-                    System.out.println(" Invalid ID format. Please use format like P1, P10, P100.");
-                    idExists = true; // Force re-entry
+                    invalidAttempts++;
+                    System.out.println("Invalid ID format. Please use format like P1, P10, P100.");
+
+                    // After first invalid input, ask if they want to retry or exit
+                    if (invalidAttempts >= 1) {
+                        System.out.print("Would you like to [1] Try again or [2] Cancel registration? ");
+                        String choice = sc.nextLine().trim();
+                        if (choice.equals("2")) {
+                            System.out.println("Registration cancelled.");
+                            return null;
+                        }
+                        // If choice is 1, continue with the loop
+                    }
                     continue;
                 }
 
-                // Check if ID already exists in merge pool
+                // Check if ID already exists
                 String finalId = id;
                 idExists = CSVMerger.getNewParticipants().stream()
                         .anyMatch(p -> p.getId().equalsIgnoreCase(finalId));
 
                 if (idExists) {
-                    System.out.println(" Participant ID '" + id + "' already exists in the merge pool. Please use a different ID.");
+                    invalidAttempts++;
+                    System.out.println("Participant ID '" + id + "' already exists.");
+
+                    // After first duplicate, ask for exit option
+                    if (invalidAttempts >= 1) {
+                        System.out.print("Would you like to [1] Try a different ID or [2] Cancel? ");
+                        String choice = sc.nextLine().trim();
+                        if (choice.equals("2")) {
+                            System.out.println("Registration cancelled.");
+                            return null;
+                        }
+                    }
                 }
             } while (idExists || !ParticipantValidator.validateId(id));
-
             // ---------------- Name Input ----------------
             String name;
             do {

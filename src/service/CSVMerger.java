@@ -52,11 +52,9 @@ public class CSVMerger {
         logger.info("Cleared " + count + " participants from merge pool");
     }
 
-    /**
-     * SIMPLE MERGE: Check if new participant ID exists in organizer file
-     * If exists - show message and don't merge
-     * If not exists - merge and create new file
-     */
+
+    //SIMPLE MERGE: Check if new participant ID exists in organizer file
+
     public static List<Participant> mergeNewParticipants(String organizerFilePath, String outputPath) {
         List<Participant> allParticipants = new ArrayList<>();
 
@@ -171,7 +169,7 @@ public class CSVMerger {
     }
 
     /** Save merged participants to a new CSV file on Desktop */
-    private static void saveMergedParticipants(List<Participant> participants, String outputPath) {
+    public static void saveMergedParticipants(List<Participant> participants, String outputPath) {
         try {
             // Ensure the directory exists
             File outputFile = new File(outputPath);

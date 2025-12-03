@@ -21,8 +21,8 @@ public class FileHandler {
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
         List<Participant> participants = new ArrayList<>();
 
-        // Validate file existence and readability first
-        validateFile(filePath);
+//        // Validate file existence and readability first
+//        validateFile(filePath);
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -344,28 +344,6 @@ public class FileHandler {
     }
 
 
-    public static void saveParticipant(String filePath, Participant p) {
-        // Ensure directory exists
-        ensureCSVExists(filePath);
-
-        try (FileWriter writer = new FileWriter(filePath, true)) {
-            String line = String.join(",",
-                    p.getId(), p.getName(), p.getEmail(), p.getPreferredGame(),
-                    String.valueOf(p.getSkillLevel()), p.getPreferredRole().name(),
-                    String.valueOf(p.getPersonalityScore()), p.getPersonalityType().name(),
-                    p.getTeamNumber() != null ? p.getTeamNumber() : ""
-            );
-            writer.write(line + "\n");
-            logger.info("Participant saved to: " + filePath + " - ID: " + p.getId());
-        } catch (IOException e) {
-            throw new FileOperationException(
-                    "Error saving participant to file: " + e.getMessage(),
-                    filePath,
-                    "SAVE",
-                    e
-            );
-        }
-    }
 
     public static List<Participant> loadTeamsFromOutput(String filePath) {
         List<Participant> teamParticipants = new ArrayList<>();

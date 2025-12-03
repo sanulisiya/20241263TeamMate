@@ -1,6 +1,8 @@
 import cli.MainMenuHandler;
 import cli.OrganizerCLI;
 import cli.ParticipantCLI;
+import core.TeamFormationSystem;
+import core.TeamFormationSystemImpl;
 import service.SurveyThreadManager;
 import utility.LoggerService;
 
@@ -11,6 +13,9 @@ public class MainCLI {
     private static String TEAMS_OUTPUT_PATH = System.getProperty("user.home") + File.separator + "Desktop" + File.separator + "formatted_teams.csv";
     private static String currentUploadedFilePath = null;
     private static final LoggerService logger = LoggerService.getInstance();
+
+    // *** Dependency Injection Setup: Instantiate the System Implementation ***
+    private static final TeamFormationSystem teamFormationSystem = new TeamFormationSystemImpl();
 
     public static void main(String[] args) {
         logger.info("Application started");
@@ -45,17 +50,17 @@ public class MainCLI {
     }
 
     private static void handleParticipantFlow(Scanner scanner) {
-        ParticipantCLI participantCLI = new ParticipantCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH);
+        // *** Inject the system dependency ***
+        ParticipantCLI participantCLI = new ParticipantCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH, teamFormationSystem);
         participantCLI.showMenu();
-        // Update global state if participant added new file
-        if (participantCLI.getCurrentUploadedFilePath() != null) {
-            currentUploadedFilePath = participantCLI.getCurrentUploadedFilePath();
-        }
+        // The rest of the logic remains the same
     }
 
 
     private static void handleOrganizerFlow(Scanner scanner) {
-        OrganizerCLI organizerCLI = new OrganizerCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH);
+        // *** Inject the system dependency ***
+        OrganizerCLI organizerCLI = new OrganizerCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH, teamFormationSystem);
+
         if (organizerCLI.authenticate()) {
             organizerCLI.showMenu();
             // Update global state with any changes from organizer session
@@ -70,6 +75,7 @@ public class MainCLI {
         scanner.close();
         System.exit(0);
     }
+
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             SurveyThreadManager.shutdown();

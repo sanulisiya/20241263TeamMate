@@ -75,10 +75,6 @@ public class ParticipantValidator {
         return role.trim().matches("(?i)^(Coordinator|Strategist|Defender|Attacker|Supporter)$");
     }
 
-    // Validate personality type score
-    public static boolean validatePersonalityScore(int personalityScore) {
-        return personalityScore >= 0 && personalityScore <= 100;
-    }
 
     // Validate personality type (case-insensitive)
     public static boolean validatePersonalityType(String type) {
@@ -97,19 +93,9 @@ public class ParticipantValidator {
                 validateGame(game) &&
                 validateRole(role) &&
                 validatePersonalityType(personalityType);
-    }
 
-    // Full participant validation WITH personality score (for updates)
-    public static boolean validateParticipantWithScore(String id, String name, String email, int skill,
-                                                       String game, String role, int personalityScore, String personalityType) {
-        return validateId(id) &&
-                validateName(name) &&
-                validateEmail(email) &&
-                validateSkillLevel(skill) &&
-                validateGame(game) &&
-                validateRole(role) &&
-                validatePersonalityScore(personalityScore) &&
-                validatePersonalityType(personalityType);
+
+
     }
 
 

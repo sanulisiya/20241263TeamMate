@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+
 public class participantLoaderTask implements Callable<List<Participant>> {
 
     private final String filePath;
@@ -38,14 +39,14 @@ public class participantLoaderTask implements Callable<List<Participant>> {
             String line;
 
             while (raf.getFilePointer() < end && (line = raf.readLine()) != null) {
-                Participant p = parseParticipant(line);
+                Participant p = ParseParticipant(line);
                 if (p != null) participants.add(p);
             }
         }
         return participants;
     }
 
-    private Participant parseParticipant(String line) {
+    private Participant ParseParticipant(String line) {
         String[] data = line.split(",");
         if (data.length < 8) return null;
 

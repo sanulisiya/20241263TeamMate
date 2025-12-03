@@ -12,6 +12,8 @@ public class MainMenuHandler {
     public MainMenuHandler(Scanner scanner) {
         this.scanner = scanner;
     }
+
+
     //---------Display Main Menu------
     public void displayMainMenu() {
         System.out.println("\n====== TEAMMATE COMMUNITY SYSTEM ======");

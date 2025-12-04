@@ -93,9 +93,6 @@ public class TeamFileHandler {
                         participants.add(p);
 
                     } catch (IllegalArgumentException e) {
-                        // FIX: Catching IllegalArgumentException handles BOTH:
-                        // 1. Enum.valueOf failure (invalid enum name)
-                        // 2. Integer.parseInt failure (NumberFormatException is a subclass of IllegalArgumentException)
                         System.err.println("Skipping malformed participant line: " + line + " Error: " + e.getMessage());
                     }
                 }

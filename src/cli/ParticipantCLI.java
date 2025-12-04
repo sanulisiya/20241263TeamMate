@@ -17,8 +17,10 @@ public class ParticipantCLI {
     //Path to organizer-uploaded CSV
     private final String currentUploadedFilePath;
     private final String teamsOutputPath;
-    // *** Dependency Injection ***
+    //  Dependency Injection
     private final TeamFormationSystem system;
+
+    //Constructor for initializing the ParticipantCLI clas
 
     public ParticipantCLI(Scanner scanner, String currentUploadedFilePath, String teamsOutputPath, TeamFormationSystem system) {
         this.scanner = scanner;
@@ -62,27 +64,19 @@ public class ParticipantCLI {
 
             logger.info("Starting participant creation process");
 
-            // *** Use system.createParticipant ***
+            // Create a new participant using the system
             Participant newParticipant = system.createParticipant();
 
             if (newParticipant != null) {
-                // *** Use system.addNewParticipant ***
+
                 system.addNewParticipant(newParticipant);
 
                 logger.info("Participant added to merge pool: " + newParticipant.getId());
                 System.out.println("\n Participant registered successfully!");
-                System.out.println(" Note: This participant is now in the merge pool.");
-                System.out.println(" ID: " + newParticipant.getId());
-                System.out.println(" Email: " + newParticipant.getEmail());
+                System.out.println("\n Note: This participant is now in the merge pool.");
+                System.out.println("    ID: " + newParticipant.getId());
+                System.out.println("    Email: " + newParticipant.getEmail());
 
-//                // Show current queue status
-//                // *** Use system.getNewParticipantsCount ***
-//                int waitingCount = system.getNewParticipantsCount();
-//                System.out.println("\n Merge Queue: " + waitingCount + " participants waiting to be merged");
-
-//                if (waitingCount > 1) {
-//                    System.out.println(" The organizer will merge all waiting participants during next team formation.");
-//                }
             } else {
                 System.out.println(" Participant registration failed. Please try again.");
             }
@@ -116,7 +110,7 @@ public class ParticipantCLI {
 
             logger.info("Loading participants for login verification from: " + loginFilePath);
 
-            // *** Use system.loadParticipants ***
+            // Load the team participants from the team output file
             List<Participant> participants = system.loadParticipants(loginFilePath);
 
             // Use stream-based search
@@ -135,7 +129,7 @@ public class ParticipantCLI {
             System.out.println(" Error loading participants: " + e.getMessage());
         }
     }
-
+    // Handles the case where the login is successful
     private void handleSuccessfulLogin(Participant participant, String participantId) {
         logger.info("Participant login successful: " + participantId);
 
@@ -154,17 +148,17 @@ public class ParticipantCLI {
 
         System.out.println("\nReturning to main menu...\n");
     }
-
+    // Handles the case where the login fails (participant not found)
     private void handleFailedLogin(String participantId) {
         logger.warn("Participant not found: " + participantId);
         System.out.println("\nParticipant not found in current dataset.");
         System.out.println("Please check your ID or contact organizer.");
         System.out.println("Returning to main menu...");
     }
-
+    // Shows the team assignment for the participant
     private void showTeamAssignment(String participantId) {
         try {
-            // *** Use system.validateFile for existence check ***
+
             if (!system.validateFile(teamsOutputPath)) {
                 logger.warn("Team file not found for participant: " + participantId);
                 System.out.println("\nNo teams have been formed yet. Please check later!");
@@ -173,7 +167,6 @@ public class ParticipantCLI {
 
             logger.info("Loading team assignments for participant from: " + teamsOutputPath);
 
-            // *** FIX: Use the new system.loadTeamsOutput method to resolve the violation ***
             List<Participant> teamParticipants = system.loadTeamsOutput(teamsOutputPath);
 
             if (teamParticipants.isEmpty()) {

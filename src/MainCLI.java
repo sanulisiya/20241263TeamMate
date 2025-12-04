@@ -14,7 +14,7 @@ public class MainCLI {
     private static String currentUploadedFilePath = null;
     private static final LoggerService logger = LoggerService.getInstance();
 
-    // *** Dependency Injection Setup: Instantiate the System Implementation ***
+    // Dependency Injection Setup: Instantiate the System Implementation
     private static final TeamFormationSystem teamFormationSystem = new TeamFormationSystemImpl();
 
     public static void main(String[] args) {

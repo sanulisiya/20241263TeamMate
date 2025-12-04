@@ -28,7 +28,7 @@ public class ParticipantValidator {
 
     // Update the ID pattern to be more flexible
     private static final Pattern ID_PATTERN = Pattern.compile(
-            "^[Pp]\\d{1,3}$"  // P followed by 1-3 digits (P1, P10, P100)
+            "^[Pp]\\d{1,3}$"  // P followed by 1-3 digits (P1, P100)
     );
 
     // Validate ID - CORRECTED

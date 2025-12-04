@@ -8,7 +8,7 @@ import java.io.File;
 import java.util.List;
 
 public class TeamFormationSystemImpl implements TeamFormationSystem {
-
+    //gger instance for logging events
     private final LoggerService logger = LoggerService.getInstance();
 
     // ==================== PARTICIPANT MANAGEMENT ====================

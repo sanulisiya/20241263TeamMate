@@ -16,6 +16,7 @@ public class CSVMerger {
     private static final List<Participant> newParticipantsPool = new CopyOnWriteArrayList<>();
 
     /** Add new participant to the merge pool */
+    //07.(Add new Particpnt Sequence digram)
     public static void addNewParticipant(Participant participant) {
         if (participant != null && participant.isValid()) {
             String normalizedId = normalize(participant.getId());
@@ -54,28 +55,26 @@ public class CSVMerger {
 
 
     //SIMPLE MERGE: Check if new participant ID exists in organizer file
-
+    //06.(Team formation Sequance digram)
     public static List<Participant> mergeNewParticipants(String organizerFilePath, String outputPath) {
         List<Participant> allParticipants = new ArrayList<>();
 
         try {
-            // 1. Load participants from organizer file
+            //  Load participants from organizer file
             List<Participant> organizerParticipants = FileHandler.loadParticipantsSingleThread(organizerFilePath);
             System.out.println(" Loaded " + organizerParticipants.size() + " participants from organizer file");
 
-            // 2. Add all organizer participants to final list
+
             allParticipants.addAll(organizerParticipants);
 
-            // 3. Create a set of existing IDs from organizer file (CASE INSENSITIVE)
             Set<String> existingIds = new HashSet<>();
             for (Participant p : organizerParticipants) {
                 if (p != null && p.getId() != null) {
                     existingIds.add(normalize(p.getId()));
-//                    System.out.println("Existing ID in organizer file: " + p.getId() + " -> normalized: " + normalize(p.getId()));
                 }
             }
 
-            // 4. Check each new participant
+            //  Check each new participant
             int mergedCount = 0;
             int skippedCount = 0;
 
@@ -102,7 +101,7 @@ public class CSVMerger {
                     allParticipants.add(newParticipant);
                     existingIds.add(normalizedNewId);
                     mergedCount++;
-                    System.out.println("MERGED: " + newId + " - " + newParticipant.getName());
+                    System.out.println(" \nMERGED: " + newId + " - " + newParticipant.getName());
                 }
             }
 
@@ -117,7 +116,7 @@ public class CSVMerger {
 
             System.out.println("\nMerge Summary:");
             System.out.println(" Merged: " + mergedCount + " participants");
-            System.out.println("  Skipped: " + skippedCount + " participants (duplicate IDs)");
+            System.out.println(" Skipped: " + skippedCount + " participants (duplicate IDs)");
             System.out.println("   Total: " + allParticipants.size() + " participants in merged file");
             System.out.println("   Saved to: " + outputPath);
 
@@ -132,10 +131,9 @@ public class CSVMerger {
     /**
      * Handle merge with options (for organizer menu)
      */
+    //2.(Team formation Sequance digram)
     public static List<Participant> mergeWithOptions(String organizerFilePath, String outputPath, Scanner scanner) {
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("MERGE OPTIONS");
-        System.out.println("=".repeat(60));
+        System.out.println("\n" + "=".repeat(70));
         System.out.println("New participants waiting: " + getNewParticipantsCount());
 
         if (getNewParticipantsCount() == 0) {

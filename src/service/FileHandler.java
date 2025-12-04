@@ -15,71 +15,85 @@ public class FileHandler {
 
     // Logger instance
     private static final LoggerService logger = LoggerService.getInstance();
+    private static String currentFilePath; // Track file path for better error context
 
     // ---------------- SINGLE-THREADED LOADER ----------------
 
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
+        currentFilePath = filePath; // Set current file path for error context
         List<Participant> participants = new ArrayList<>();
 
-//        // Validate file existence and readability first
-//        validateFile(filePath);
+        try {
+            validateFile(filePath);
 
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            int lineNumber = 0;
-            int successCount = 0;
-            int errorCount = 0;
+            try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+                String line;
+                int lineNumber = 0;
+                int successCount = 0;
+                int errorCount = 0;
 
-            // Check if file has header and skip it
-            if (br.ready()) {
-                String firstLine = br.readLine();
-                lineNumber++;
+                // Check if file has header and skip it
+                if (br.ready()) {
+                    String firstLine = br.readLine();
+                    lineNumber++;
 
-                if (firstLine != null) {
-                    if (isHeaderLine(firstLine)) {
-                        logger.debug("Skipping header line: " + firstLine);
-                    } else {
-                        // This might be data, so parse it
-                        try {
-                            Participant p = parseParticipant(firstLine, lineNumber);
-                            if (p != null) {
-                                participants.add(p);
-                                successCount++;
+                    if (firstLine != null) {
+                        if (isHeaderLine(firstLine)) {
+                            logger.debug("Skipping header line: " + firstLine);
+                        } else {
+
+                            try {
+                                Participant p = parseParticipant(firstLine, lineNumber, filePath);
+                                if (p != null) {
+                                    participants.add(p);
+                                    successCount++;
+                                }
+                            } catch (ParticipantValidationException e) {
+                                errorCount++;
+                                logger.warn("Failed to parse line " + lineNumber + ": " + firstLine +
+                                        " - Field: " + e.getFieldName() +
+                                        " - Error: " + e.getMessage());
+
+                            } catch (Exception e) {
+                                errorCount++;
+                                logger.warn("Unexpected error parsing line " + lineNumber + ": " + e.getMessage());
                             }
-                        } catch (Exception e) {
-                            errorCount++;
-                            logger.warn("Failed to parse line " + lineNumber + ": " + firstLine + " - " + e.getMessage());
                         }
                     }
                 }
-            }
 
-            while ((line = br.readLine()) != null) {
-                lineNumber++;
-                try {
-                    Participant p = parseParticipant(line, lineNumber);
-                    if (p != null) {
-                        participants.add(p);
-                        successCount++;
+                while ((line = br.readLine()) != null) {
+                    lineNumber++;
+                    try {
+                        Participant p = parseParticipant(line, lineNumber, filePath);
+                        if (p != null) {
+                            participants.add(p);
+                            successCount++;
+                        }
+                    } catch (ParticipantValidationException e) {
+                        errorCount++;
+                        logger.warn("Failed to parse line " + lineNumber + ": " + line +
+                                " - Field: " + e.getFieldName() +
+                                " - Error: " + e.getMessage());
+                        // Continue processing other lines
+                    } catch (Exception e) {
+                        errorCount++;
+                        logger.warn("Unexpected error parsing line " + lineNumber + ": " + e.getMessage());
                     }
-                } catch (Exception e) {
-                    errorCount++;
-                    logger.warn("Failed to parse line " + lineNumber + ": " + line + " - " + e.getMessage());
-                    // Continue processing other lines instead of failing completely
                 }
+
+                logger.info("Loaded " + successCount + " participants from: " + filePath +
+                        " (Failed: " + errorCount + " lines)");
+
+                if (successCount == 0 && errorCount > 0) {
+                    throw new FileOperationException(
+                            "No valid participants found in file. Check file format.",
+                            filePath,
+                            "READ"
+                    );
+                }
+
             }
-
-            logger.info("Loaded " + successCount + " participants from: " + filePath +
-                    " (Failed: " + errorCount + " lines)");
-
-            if (successCount == 0 && errorCount > 0) {
-                throw new FileOperationException(
-                        "No valid participants found in file. Check file format.",
-                        filePath,
-                        "READ"
-                );
-            }
-
         } catch (FileNotFoundException e) {
             throw new FileOperationException(
                     "File not found: " + filePath,
@@ -103,6 +117,8 @@ public class FileHandler {
                     "READ",
                     e
             );
+        } finally {
+            currentFilePath = null; // Clear current file path
         }
 
         return participants;
@@ -165,7 +181,7 @@ public class FileHandler {
 
     // ---------------- PARSE PARTICIPANT (IMPROVED ERROR HANDLING) ----------------
 
-    private static Participant parseParticipant(String line, int lineNumber) {
+    private static Participant parseParticipant(String line, int lineNumber, String filePath) {
         if (line == null || line.trim().isEmpty()) {
             return null;
         }
@@ -212,26 +228,26 @@ public class FileHandler {
                     name = data[2];
                     email = data[3];
                     game = data[4];
-                    skillLevel = parseIntegerSafe(data[5], "SkillLevel", lineNumber);
-                    preferredRole = parseRoleTypeSafe(data[6], lineNumber);
-                    personalityScore = parseIntegerSafe(data[7], "PersonalityScore", lineNumber);
-                    personalityType = parsePersonalityTypeSafe(data[8], lineNumber);
+                    skillLevel = parseIntegerSafe(data[5], "SkillLevel", lineNumber, filePath);
+                    preferredRole = parseRoleTypeSafe(data[6], lineNumber, filePath);
+                    personalityScore = parseIntegerSafe(data[7], "PersonalityScore", lineNumber, filePath);
+                    personalityType = parsePersonalityTypeSafe(data[8], lineNumber, filePath);
                 } else {
                     // Main participants format: ID,Name,Email,Game,Skill,Role,Score,PersonalityType
                     id = data[0];
                     name = data[1];
                     email = data[2];
                     game = data[3];
-                    skillLevel = parseIntegerSafe(data[4], "SkillLevel", lineNumber);
-                    preferredRole = parseRoleTypeSafe(data[5], lineNumber);
-                    personalityScore = parseIntegerSafe(data[6], "PersonalityScore", lineNumber);
-                    personalityType = parsePersonalityTypeSafe(data[7], lineNumber);
+                    skillLevel = parseIntegerSafe(data[4], "SkillLevel", lineNumber, filePath);
+                    preferredRole = parseRoleTypeSafe(data[5], lineNumber, filePath);
+                    personalityScore = parseIntegerSafe(data[6], "PersonalityScore", lineNumber, filePath);
+                    personalityType = parsePersonalityTypeSafe(data[7], lineNumber, filePath);
                 }
 
                 // Validate required fields
-                validateRequiredField(id, "ID", lineNumber);
-                validateRequiredField(name, "Name", lineNumber);
-                validateRequiredField(email, "Email", lineNumber);
+                validateRequiredField(id, "ID", lineNumber, filePath);
+                validateRequiredField(name, "Name", lineNumber, filePath);
+                validateRequiredField(email, "Email", lineNumber, filePath);
 
                 // Create participant
                 Participant participant = new Participant(id, name, email, game, skillLevel, preferredRole, personalityScore, personalityType);
@@ -251,16 +267,17 @@ public class FileHandler {
             }
 
         } catch (ParticipantValidationException e) {
-            // Re-throw our custom exceptions with line number context
+            // Re-throw with file context
             throw new ParticipantValidationException(
-                    "Line " + lineNumber + ": " + e.getMessage(),
+                    "File: " + filePath + ", Line " + lineNumber + ": " + e.getMessage(),
                     e.getFieldName(),
                     e.getInvalidValue(),
                     e
             );
         } catch (Exception e) {
+            // Wrap in ParticipantValidationException for consistency
             throw new ParticipantValidationException(
-                    "Line " + lineNumber + ": Unexpected parsing error - " + e.getMessage(),
+                    "File: " + filePath + ", Line " + lineNumber + ": Unexpected parsing error - " + e.getMessage(),
                     "CSV_ROW",
                     trimmedLine,
                     e
@@ -270,7 +287,7 @@ public class FileHandler {
 
     // ---------------- SAFE PARSING METHODS ----------------
 
-    private static int parseIntegerSafe(String value, String fieldName, int lineNumber) {
+    private static int parseIntegerSafe(String value, String fieldName, int lineNumber, String filePath) {
         if (value == null || value.trim().isEmpty()) {
             throw new ParticipantValidationException(
                     fieldName + " cannot be empty",
@@ -283,7 +300,8 @@ public class FileHandler {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
             throw new ParticipantValidationException(
-                    "Invalid number format for " + fieldName + ": " + value,
+                    "File: " + filePath + ", Line " + lineNumber +
+                            ": Invalid number format for " + fieldName + ": '" + value + "'",
                     fieldName,
                     value,
                     e
@@ -291,7 +309,7 @@ public class FileHandler {
         }
     }
 
-    private static RoleType parseRoleTypeSafe(String value, int lineNumber) {
+    private static RoleType parseRoleTypeSafe(String value, int lineNumber, String filePath) {
         if (value == null || value.trim().isEmpty()) {
             throw new ParticipantValidationException(
                     "Role cannot be empty",
@@ -304,7 +322,8 @@ public class FileHandler {
             return RoleType.valueOf(value.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ParticipantValidationException(
-                    "Invalid role: " + value + ". Valid roles: STRATEGIST, ATTACKER, DEFENDER, SUPPORTER, COORDINATOR",
+                    "File: " + filePath + ", Line " + lineNumber +
+                            ": Invalid role: '" + value + "'. Valid roles: STRATEGIST, ATTACKER, DEFENDER, SUPPORTER, COORDINATOR",
                     "Role",
                     value,
                     e
@@ -312,7 +331,7 @@ public class FileHandler {
         }
     }
 
-    private static PersonalityType parsePersonalityTypeSafe(String value, int lineNumber) {
+    private static PersonalityType parsePersonalityTypeSafe(String value, int lineNumber, String filePath) {
         if (value == null || value.trim().isEmpty()) {
             throw new ParticipantValidationException(
                     "PersonalityType cannot be empty",
@@ -325,7 +344,8 @@ public class FileHandler {
             return PersonalityType.fromString(value);
         } catch (Exception e) {
             throw new ParticipantValidationException(
-                    "Invalid personality type: " + value + ". Valid types: LEADER, THINKER, BALANCED, MOTIVATOR",
+                    "File: " + filePath + ", Line " + lineNumber +
+                            ": Invalid personality type: '" + value + "'. Valid types: LEADER, THINKER, BALANCED, MOTIVATOR",
                     "PersonalityType",
                     value,
                     e
@@ -333,17 +353,16 @@ public class FileHandler {
         }
     }
 
-    private static void validateRequiredField(String value, String fieldName, int lineNumber) {
+    private static void validateRequiredField(String value, String fieldName, int lineNumber, String filePath) {
         if (value == null || value.trim().isEmpty()) {
             throw new ParticipantValidationException(
-                    fieldName + " cannot be empty",
+                    "File: " + filePath + ", Line " + lineNumber +
+                            ": " + fieldName + " cannot be empty",
                     fieldName,
                     value
             );
         }
     }
-
-
 
     public static List<Participant> loadTeamsFromOutput(String filePath) {
         List<Participant> teamParticipants = new ArrayList<>();
@@ -354,14 +373,25 @@ public class FileHandler {
 
             while ((line = br.readLine()) != null) {
                 try {
-                    Participant p = parseTeamParticipant(line);
+                    Participant p = parseTeamParticipant(line, filePath);
                     if (p != null) teamParticipants.add(p);
-                } catch (Exception e) {
-                    logger.warn("Failed to parse team participant: " + line + " - " + e.getMessage());
+                } catch (ParticipantValidationException e) {
+                    logger.warn("Failed to parse team participant: " + line +
+                            " - Field: " + e.getFieldName() +
+                            " - Error: " + e.getMessage());
                     // Continue with other lines
+                } catch (Exception e) {
+                    logger.warn("Unexpected error parsing team participant: " + e.getMessage());
                 }
             }
 
+        } catch (FileNotFoundException e) {
+            throw new FileOperationException(
+                    "Team file not found: " + filePath,
+                    filePath,
+                    "READ",
+                    e
+            );
         } catch (IOException e) {
             throw new FileOperationException(
                     "Error reading team file: " + e.getMessage(),
@@ -375,9 +405,9 @@ public class FileHandler {
         return teamParticipants;
     }
 
-    private static Participant parseTeamParticipant(String line) {
-        // Simplified version for team files - uses the main parser
-        return parseParticipant(line, 0); // lineNumber 0 for unknown
+    private static Participant parseTeamParticipant(String line, String filePath) {
+        // Simplified version for team files - uses the main parser with line number 0
+        return parseParticipant(line, 0, filePath);
     }
 
     public static void ensureCSVExists(String filePath) {
@@ -398,14 +428,20 @@ public class FileHandler {
                 }
             }
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new FileOperationException(
                     "Could not create CSV file: " + e.getMessage(),
                     filePath,
                     "CREATE",
                     e
             );
+        } catch (Exception e) {
+            throw new FileOperationException(
+                    "Unexpected error creating CSV: " + e.getMessage(),
+                    filePath,
+                    "CREATE",
+                    e
+            );
         }
     }
-
 }

@@ -24,7 +24,7 @@ public class TeamFormationHandler {
         this.uploadedFilePath = uploadedFilePath;
         this.teamsOutputPath = teamsOutputPath;
     }
-
+    // Main method to handle team formation process
     public TeamFormationResult handleTeamFormation() {
         if (uploadedFilePath == null) {
             System.out.println("No file uploaded. Please upload a CSV first.");
@@ -32,7 +32,7 @@ public class TeamFormationHandler {
         }
 
         System.out.println("\n" + "=".repeat(60));
-        System.out.println(" DATA MERGE OPTIONS");
+        System.out.println("Formation Details ");
         System.out.println("=".repeat(60));
         System.out.println(" Current Status:");
         System.out.println("   - Organizer file: " + uploadedFilePath);
@@ -40,7 +40,7 @@ public class TeamFormationHandler {
 
         System.out.print("\nDo you want to merge additional data? (yes/no): ");
         String mergeChoice = scanner.nextLine().trim().toLowerCase();
-
+        // Handle merge choice and load participants accordingl
         List<Participant> workingParticipants = handleEnhancedMergeChoice(mergeChoice);
         if (workingParticipants == null || workingParticipants.isEmpty()) {
             System.out.println("No participants available for team formation.");
@@ -52,7 +52,8 @@ public class TeamFormationHandler {
 
         return performTeamFormation(workingParticipants, teamSize);
     }
-
+    // Handle the merging of new data with the existing CSV file
+    //03. (Team Formation Sequance Digram)
     private List<Participant> handleEnhancedMergeChoice(String mergeChoice) {
         List<Participant> workingParticipants;
         if (mergeChoice.equals("yes") || mergeChoice.equals("y")) {
@@ -63,7 +64,7 @@ public class TeamFormationHandler {
 
                 logger.info("Starting merge process. Merged file path: " + tempMergedPath);
                 System.out.println("\n Starting merge process...");
-                System.out.println(" Merged file will be saved to: " + tempMergedPath);
+                System.out.println("   Merged file will be saved to: " + tempMergedPath);
 
                 workingParticipants = CSVMerger.mergeWithOptions(uploadedFilePath, tempMergedPath, scanner);
 
@@ -82,7 +83,8 @@ public class TeamFormationHandler {
         }
         return workingParticipants;
     }
-
+    // Load participants from the original organizer file
+    //05. (Team Formation Sequance Digram)
     private List<Participant> loadOrganizerFileOnly() {
         try {
             List<Participant> participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
@@ -128,7 +130,7 @@ public class TeamFormationHandler {
     }
 
     // ============================================================
-    //              CLEANED TEAM FORMATION LOGIC
+    //             TEAM FORMATION LOGIC
     // ============================================================
 
     private TeamFormationResult performTeamFormation(List<Participant> workingParticipants, int teamSize) {
@@ -159,8 +161,8 @@ public class TeamFormationHandler {
                 displayFormationResults(mainTeams, leftoverTeams, remainingPool, finalTeams.size());
 
                 // 4. REARRANGE OPTION
-                System.out.println("\n" + "=".repeat(50));
-                System.out.print("Do you want to **rearrange all participants** to try for a better result? (yes/no): ");
+                System.out.println("\n" + "=".repeat(70));
+                System.out.print("Do you want to rearrange all participants** to try for a better result? (yes/no): ");
                 String rearrange = scanner.nextLine().trim().toLowerCase();
 
                 if (rearrange.equals("yes") || rearrange.equals("y")) {
@@ -190,8 +192,8 @@ public class TeamFormationHandler {
                     System.out.println("=".repeat(60));
                     System.out.println("Total teams formed: " + finalTeams.size());
                     System.out.println("Total participants in teams: " + finalTeams.stream().mapToInt(List::size).sum());
-                    System.out.println(" Remaining unassigned: " + rearrangementPool.size());
-                    System.out.println(" Total participants processed: " + workingParticipants.size());
+                    System.out.println("   Remaining unassigned: " + rearrangementPool.size());
+                    System.out.println("   Total participants processed: " + workingParticipants.size());
                 }
 
             } catch (Exception e) {
@@ -226,8 +228,7 @@ public class TeamFormationHandler {
                 long thinkerCount = currentTeam.stream()
                         .filter(p -> p.getPersonalityType().name().equals("THINKER"))
                         .count();
-
-                System.out.println("\n--------------------------------------------------------------------------------------------------------------------------");
+                System.out.println("\n" + "-".repeat(90));
                 System.out.println("\n======= TEAM " + (i + 1 + offset) + " =======");
                 System.out.printf(" Average Skill: %.2f | Size: %d | Leaders: %d | Thinkers: %d\n",
                         teamAvgSkill, currentTeam.size(), leaderCount, thinkerCount);
@@ -235,6 +236,7 @@ public class TeamFormationHandler {
                 for (Participant p : currentTeam) {
                     System.out.println("  " + p.getId() + " | " + p.getName() +
                             " | " + p.getPreferredRole() +
+                            " | " + p.getPreferredGame()+
                             " | Skill: " + p.getSkillLevel() +
                             " | " + p.getPersonalityType());
                 }
@@ -260,13 +262,14 @@ public class TeamFormationHandler {
                 for (Participant p : currentLeftoverTeam) {
                     System.out.println("  " + p.getId() + " | " + p.getName() +
                             " | " + p.getPreferredRole() +
+                            " | " + p.getPreferredGame()+
                             " | Skill: " + p.getSkillLevel() +
                             " | " + p.getPersonalityType());
                 }
             }
         }
 
-        // 3. UNASSIGNED PARTICIPANTS
+        // 3. UNsASSIGNED PARTICIPANTS
         if (!remainingPool.isEmpty()) {
             System.out.println("\n================== REMAINING UNASSIGNED PARTICIPANTS ==================");
             System.out.println("Count: " + remainingPool.size());

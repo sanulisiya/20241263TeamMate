@@ -8,6 +8,7 @@ import java.util.*;
 public class OrganizerCLI {
     //Logger for system
     private static final LoggerService logger = LoggerService.getInstance();
+    //Constant for the Organizer PIN
     private static final String ORGANIZER_PIN = "1234";
 
     private final Scanner scanner;
@@ -34,6 +35,7 @@ public class OrganizerCLI {
         this.system = system; // Initializing the injected dependency
     }
 
+    //Method to authenticate the organizer using the PIN
     public boolean authenticate() {
         System.out.print("\nEnter Organizer PIN: ");
         String pin = scanner.nextLine().trim();
@@ -49,6 +51,7 @@ public class OrganizerCLI {
         return true;
     }
 
+    //Method to display the menu options for the organizer
     public void showMenu() {
         boolean organizerRunning = true;
 
@@ -99,13 +102,13 @@ public class OrganizerCLI {
         System.out.print("\nEnter CSV File Path: ");
         String path = scanner.nextLine();
         try {
-            // *** Use system.loadParticipants ***
+            //  Use system.loadParticipants
             participants = system.loadParticipants(path);
             if (participants != null && !participants.isEmpty()) {
                 updatedFilePath = path;
                 logger.info("CSV uploaded successfully: " + path + " with " + participants.size() + " participants");
-                System.out.println("CSV Uploaded Successfully! Total Participants: " + participants.size());
-                System.out.println("This file will now be used for participant login verification.");
+                System.out.println("\n CSV Uploaded Successfully! Total Participants: " + participants.size());
+                System.out.println("   This file will now be used for participant login verification.");
 
                 System.out.println("\nSample of loaded participants:");
                 for (int i = 0; i < Math.min(3, participants.size()); i++) {
@@ -130,15 +133,16 @@ public class OrganizerCLI {
 
         try {
             if (updatedFilePath != null) {
-                // *** Use system.loadParticipants ***
+                //  Use system.loadParticipants
                 participants = system.loadParticipants(updatedFilePath);
             }
             logger.info("Viewing all participants from: " + updatedFilePath);
-            System.out.println("\n----- PARTICIPANT LIST -----");
-            System.out.println("Total Participants: " + participants.size());
+            System.out.println("\n------- PARTICIPANT LIST --------");
+            System.out.println("\nTotal Participants: " + participants.size());
             System.out.println("Source File: " + (updatedFilePath != null ? updatedFilePath : "Default file"));
+//            System.out.println("                                     ");
             for (int i = 0; i < participants.size(); i++) {
-                System.out.println((i + 1) + ". " + participants.get(i));
+                System.out.println((i + 1) + "\n. " + participants.get(i));
             }
         } catch (Exception e) {
             logger.error("Error loading participants for viewing", e);
@@ -147,6 +151,7 @@ public class OrganizerCLI {
     }
 
     // Triggers team formation through TeamFormationHandler.
+    //01. (Team Formation Sequance Digram)
     private void handleTeamFormation() {
         if (updatedFilePath == null) {
             System.out.println("No file uploaded. Upload CSV first.");
@@ -185,14 +190,14 @@ public class OrganizerCLI {
         }
 
         try {
-            // *** Use system.saveTeams ***
+            //  Use system.saveTeams
             system.saveTeams(teams, userPath);
             teamsOutputPath = userPath;
             logger.info("Teams saved successfully to: " + teamsOutputPath);
             System.out.println("\n Teams successfully saved!");
-            System.out.println("Saved to: " + teamsOutputPath);
-            System.out.println("Total formatted teams saved: " + teams.size());
-            System.out.println("Participants can now view their assigned teams in the participant menu.");
+            System.out.println("\n Saved to: " + teamsOutputPath);
+            System.out.println("   Total formatted teams saved: " + teams.size());
+            System.out.println("\n Participants can now view their assigned teams in the participant menu.");
         } catch (Exception e) {
             logger.error("Error saving teams to: " + userPath, e);
             System.out.println(" Error saving teams: " + e.getMessage());

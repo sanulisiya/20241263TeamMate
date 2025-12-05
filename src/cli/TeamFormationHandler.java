@@ -25,9 +25,9 @@ public class TeamFormationHandler {
         this.teamsOutputPath = teamsOutputPath;
     }
     // Main method to handle team formation process
-    public TeamFormationResult handleTeamFormation() {
+    public TeamFormationResult handleTeamFormation() { //1.5.(SD-Team Formation)
         if (uploadedFilePath == null) {
-            System.out.println("No file uploaded. Please upload a CSV first.");
+            System.out.println("No file uploaded. Please upload a CSV first.");//1.3.(SD-Team Formation)
             return null;
         }
 
@@ -38,8 +38,8 @@ public class TeamFormationHandler {
         System.out.println("   - Organizer file: " + uploadedFilePath);
         System.out.println("   - New participants waiting: " + CSVMerger.getNewParticipantsCount());
 
-        System.out.print("\nDo you want to merge additional data? (yes/no): ");
-        String mergeChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.print("\nDo you want to merge additional data? (yes/no): "); //2.(SD-Team Formation)
+        String mergeChoice = scanner.nextLine().trim().toLowerCase(); //2.1.(SD-Team Formation)
         // Handle merge choice and load participants accordingl
         List<Participant> workingParticipants = handleEnhancedMergeChoice(mergeChoice);
         if (workingParticipants == null || workingParticipants.isEmpty()) {
@@ -54,7 +54,7 @@ public class TeamFormationHandler {
     }
     // Handle the merging of new data with the existing CSV file
     //03. (Team Formation Sequance Digram)
-    private List<Participant> handleEnhancedMergeChoice(String mergeChoice) {
+    private List<Participant> handleEnhancedMergeChoice(String mergeChoice) {//3.(SD-Team Formation)
         List<Participant> workingParticipants;
         if (mergeChoice.equals("yes") || mergeChoice.equals("y")) {
             try {
@@ -84,10 +84,10 @@ public class TeamFormationHandler {
         return workingParticipants;
     }
     // Load participants from the original organizer file
-    //05. (Team Formation Sequance Digram)
+    //2.3.(SD-Team Formation)
     private List<Participant> loadOrganizerFileOnly() {
         try {
-            List<Participant> participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath);
+            List<Participant> participants = FileHandler.loadParticipantsSingleThread(uploadedFilePath); //2.3.3.(SD-Team Formation)
             logger.info("Loaded participants without merging: " + participants.size());
             System.out.println("Loaded " + participants.size() + " participants from organizer file.");
             return participants;
@@ -104,9 +104,9 @@ public class TeamFormationHandler {
         System.out.println("=".repeat(50));
         System.out.println("Total participants available: " + workingParticipants.size());
 
-        System.out.print("Enter desired team size: ");
+        System.out.print("Enter desired team size: "); //2.4.Ask team size
         try {
-            int teamSize = scanner.nextInt();
+            int teamSize = scanner.nextInt(); //2.4.1.(SD-Team Formation)
             scanner.nextLine();
 
             if (teamSize <= 0) {
@@ -162,8 +162,8 @@ public class TeamFormationHandler {
 
                 // 4. REARRANGE OPTION
                 System.out.println("\n" + "=".repeat(70));
-                System.out.print("Do you want to rearrange all participants** to try for a better result? (yes/no): ");
-                String rearrange = scanner.nextLine().trim().toLowerCase();
+                System.out.print("Do you want to rearrange all participants** to try for a better result? (yes/no): "); //2.6.(SD-Team Formation)
+                String rearrange = scanner.nextLine().trim().toLowerCase();//2.6.1.(SD-Team Formation)
 
                 if (rearrange.equals("yes") || rearrange.equals("y")) {
                     rearrangementPool = new ArrayList<>();

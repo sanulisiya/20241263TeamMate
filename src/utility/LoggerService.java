@@ -64,7 +64,7 @@ public class LoggerService {
 
         // Also print errors to console
         if ("ERROR".equals(level)) {
-            System.err.println("❌ " + message);
+            System.err.println( message);
         }
     }
 

@@ -26,10 +26,8 @@ public class BalancedTeamAlgorithm extends TeamFormationAlgorithm {
         for (int i = 0; i < sorted.size(); i++) {
             int teamIndex;
             if ((i / teamSize) % 2 == 0) {
-                // Forward order
                 teamIndex = i % teamCount;
             } else {
-                // Reverse order
                 teamIndex = teamCount - 1 - (i % teamCount);
             }
             teams.get(teamIndex).add(sorted.get(i));

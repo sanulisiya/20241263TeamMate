@@ -2,7 +2,7 @@ package cli;
 
 import model.Participant;
 import java.util.List;
-
+//holds the result of the team formation process.
 public class TeamFormationResult {
     private final List<List<Participant>> teams;
     private final List<Participant> remainingPool;

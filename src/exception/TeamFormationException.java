@@ -1,4 +1,3 @@
-// File: exception/TeamFormationException.java
 package exception;
 
 /**

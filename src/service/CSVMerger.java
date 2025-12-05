@@ -132,12 +132,12 @@ public class CSVMerger {
      * Handle merge with options (for organizer menu)
      */
     //2.(Team formation Sequance digram)
-    public static List<Participant> mergeWithOptions(String organizerFilePath, String outputPath, Scanner scanner) {
+    public static List<Participant> mergeWithOptions(String organizerFilePath, String outputPath, Scanner scanner) { //2.2.(SD-Team Formation)
         System.out.println("\n" + "=".repeat(70));
         System.out.println("New participants waiting: " + getNewParticipantsCount());
 
-        if (getNewParticipantsCount() == 0) {
-            System.out.println("No new participants to merge. Using organizer file only.");
+        if (getNewParticipantsCount() == 0) { //2.3.(SD-Team Formation)
+            System.out.println("No new participants to merge. Using organizer file only."); //2.4.(SD-Team Formation)
             try {
                 List<Participant> organizerParticipants = FileHandler.loadParticipantsSingleThread(organizerFilePath);
                 saveMergedParticipants(organizerParticipants, outputPath);

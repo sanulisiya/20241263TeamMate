@@ -1,5 +1,6 @@
 package service;
 
+import exception.FileOperationException;
 import model.Participant;
 
 import java.io.File;
@@ -39,11 +40,16 @@ public class ParticipantLoaderThreadManager {
             }
 
         } catch (Exception e) {
-            System.err.println("Thread loading error: " + e.getMessage());
+            throw new FileOperationException(
+                    "Multi-threaded loading failed: " + e.getMessage(),
+                    filePath,
+                    "READ",
+                    e
+            );
         } finally {
             executor.shutdown();
         }
-
         return allParticipants;
     }
 }
+

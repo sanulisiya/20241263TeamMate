@@ -15,19 +15,20 @@ public class TeamFileHandler {
 
     private static final String CSV_DELIMITER = ",";
 
+    //3.(SD-save Teams)
     public static void saveTeamsToCSV(List<List<Participant>> teams, String outputPath) {
         try (FileWriter writer = new FileWriter(outputPath)) {
 
             // Write CSV header
-            writer.write("Team Number,ID,Name,Email,Preferred Game,Skill Level,Preferred Role,Personality Score,Personality Type\n");
+            writer.write("Team Number,ID,Name,Email,Preferred Game,Skill Level,Preferred Role,Personality Score,Personality Type\n"); //3.1.(SD-save Teams)
 
             // Loop through each team
-            for (int i = 0; i < teams.size(); i++) {
+            for (int i = 0; i < teams.size(); i++) { ////3.2.(SD-save Teams)
                 int teamNumber = i + 1;
                 List<Participant> team = teams.get(i);
 
                 // Write each participant in that team
-                for (Participant p : team) {
+                for (Participant p : team) {//3.3.Write Data to csv file
                     writer.write(teamNumber + "," +
                             p.getId() + "," +
                             p.getName() + "," +

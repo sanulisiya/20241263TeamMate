@@ -18,13 +18,15 @@ public class FileHandler {
     private static String currentFilePath; // Track file path for better error context
 
     // ---------------- SINGLE-THREADED LOADER ----------------
+    //3.(SD- upload csv)
 
+    //04..(SD- View all Participant) .07.(SD-Team Formation)
     public static List<Participant> loadParticipantsSingleThread(String filePath) {
-        currentFilePath = filePath; // Set current file path for error context
+        currentFilePath = filePath; // Set current file path for error context  //01.(SD- View all Participant)
         List<Participant> participants = new ArrayList<>();
 
         try {
-            validateFile(filePath);
+            validateFile(filePath);  //3.1.(SD- upload csv)
 
             try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
                 String line;
@@ -38,17 +40,17 @@ public class FileHandler {
                     lineNumber++;
 
                     if (firstLine != null) {
-                        if (isHeaderLine(firstLine)) {
+                        if (isHeaderLine(firstLine)) { //3.2.(SD- upload csv)
                             logger.debug("Skipping header line: " + firstLine);
                         } else {
 
                             try {
-                                Participant p = parseParticipant(firstLine, lineNumber, filePath);
+                                Participant p = parseParticipant(firstLine, lineNumber, filePath); //3.3.(SD- upload csv)
                                 if (p != null) {
                                     participants.add(p);
                                     successCount++;
                                 }
-                            } catch (ParticipantValidationException e) {
+                            } catch (ParticipantValidationException e) { //3.4.(SD- upload csv)
                                 errorCount++;
                                 logger.warn("Failed to parse line " + lineNumber + ": " + firstLine +
                                         " - Field: " + e.getFieldName() +
@@ -121,7 +123,7 @@ public class FileHandler {
             currentFilePath = null; // Clear current file path
         }
 
-        return participants;
+        return participants;   //7.1.(SD-Team Formation)
     }
 
     // ---------------- FILE VALIDATION ----------------

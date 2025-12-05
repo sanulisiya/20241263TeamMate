@@ -6,7 +6,6 @@ import model.PersonalityType;
 import utility.LoggerService;
 
 import java.util.*;
-import java.io.*;
 
 public class ParticipantCreator {
 
@@ -30,13 +29,13 @@ public class ParticipantCreator {
             boolean idExists = false;
             int invalidAttempts = 0;
             do {
-                System.out.print("Enter Participant ID (e.g., P001, P10, P100) o: ");
+                System.out.print("Enter Participant ID (e.g., P001,P010,P100) : ");
                 id = sc.nextLine().trim();
 
                 // Validate ID format
                 if (!ParticipantValidator.validateId(id)) {
                     invalidAttempts++;
-                    System.out.println("Invalid ID format. Please use format like P1, P10, P100.");
+                    System.out.println("Invalid ID format. Please use format like P1, P010, P100.");
 
                     // After first invalid input, ask if they want to retry or exit
                     if (invalidAttempts >= 1) {
@@ -150,7 +149,7 @@ public class ParticipantCreator {
 
             System.out.println("\n Participant created successfully!");
             System.out.println(" Personality Type: " + personalityType + " (" + personalityScore + ")");
-            System.out.println("\n Participant Details:");
+            System.out.println("\nParticipant Details:");
             System.out.println(p);
 
             return p;

@@ -8,7 +8,7 @@ import java.io.File;
 import java.util.List;
 
 public class TeamFormationSystemImpl implements TeamFormationSystem {
-    //gger instance for logging events
+    //Logger instance for logging events
     private final LoggerService logger = LoggerService.getInstance();
 
     // ==================== PARTICIPANT MANAGEMENT ====================
@@ -23,9 +23,10 @@ public class TeamFormationSystemImpl implements TeamFormationSystem {
         return participant != null && participant.isValid();
     }
 
-    @Override
+    @Override //2.(SD- upload csv) (SD- View all Participant)
+
     public List<Participant> loadParticipants(String filePath) {
-        return FileHandler.loadParticipantsSingleThread(filePath);
+        return FileHandler.loadParticipantsSingleThread(filePath); //2.1.(SD- upload csv)
     }
 
     @Override
@@ -56,7 +57,7 @@ public class TeamFormationSystemImpl implements TeamFormationSystem {
     }
 
     @Override
-    public void saveTeams(List<List<Participant>> teams, String filePath) {
+    public void saveTeams(List<List<Participant>> teams, String filePath) { //2.(SD-save Teams)
         TeamFileHandler.saveTeamsToCSV(teams, filePath);
     }
 

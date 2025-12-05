@@ -23,7 +23,7 @@ public class ParticipantValidator {
 
     // Name regex: letters and spaces, 2-50 chars
     private static final Pattern NAME_PATTERN = Pattern.compile(
-            "^[A-Za-z ]{2,50}$"
+            "^[A-Za-z0-9 ]{2,50}$"
     );
 
     // Update the ID pattern to be more flexible

@@ -32,7 +32,7 @@ public class MainMenuHandler {
             return choice;
         } catch (Exception e) {
             scanner.nextLine();
-            System.out.println("Invalid input. Please enter a number.");
+            System.out.println("Invalid input. Please enter a number.");//In case of invalid input
             return -1;
         }
     }

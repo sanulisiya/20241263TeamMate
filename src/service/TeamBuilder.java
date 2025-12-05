@@ -10,8 +10,7 @@ import java.util.stream.Collectors;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class TeamBuilder {
-
-    // NOTE: This list needs synchronization if accessed by multiple threads outside of the parallel stream
+    // Synchronized list to store remaining participants that couldn't be placed in teams
     private static final List<Participant> remainingParticipants = Collections.synchronizedList(new ArrayList<>());
     private static final int GAME_CAP = 2;
     private static final int MAX_THINKERS = 2;
@@ -19,7 +18,7 @@ public class TeamBuilder {
 
     public static final LoggerService logger = LoggerService.getInstance();
 
-    public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) {
+    public static List<List<Participant>> formTeams(List<Participant> participants, int teamSize) { //2.5.(SD-Team Formation)
         logger.info("Starting team formation process");
         remainingParticipants.clear();
 
@@ -87,10 +86,7 @@ public class TeamBuilder {
 
                 if (bestTeam != null) {
                     synchronized (bestTeam) {
-                        // *** CRITICAL FIX: DOUBLE-CHECK CONSTRAINTS ***
-                        // We must verify limits again inside the lock because another thread
-                        // might have filled the spot while we were waiting.
-
+                        //  DOUBLE-CHECK CONSTRAINTS ***
                         boolean sizeOk = bestTeam.getMembers().size() < teamSize;
                         boolean gameOk = bestTeam.getGameCount(p.getPreferredGame()) < GAME_CAP;
 
@@ -129,7 +125,7 @@ public class TeamBuilder {
             throw new TeamFormationException("Error forming teams", "FORMATION_ERROR", e);
         }
     }
-
+    // Form teams from leftover participants
     public static List<List<Participant>> formLeftoverTeams(int teamSize) {
         List<Participant> pool = new ArrayList<>(getRemainingParticipants());
         if (teamSize <= 0 || pool.size() < teamSize) return Collections.emptyList();
@@ -174,7 +170,7 @@ public class TeamBuilder {
 
         return finalNewTeams;
     }
-
+    //// Method to find the best fitting team for a participant
     private static Team findBestTeamForParticipant(List<Team> teams, Participant p, double overallAvg, int teamSize) {
         if (p == null) return null;
 
@@ -183,7 +179,6 @@ public class TeamBuilder {
         List<Team> validTeams = new ArrayList<>();
         double minDiff = Double.MAX_VALUE;
 
-        // Note: This is a read-only check. It might be stale by the time we write!
         for (Team team : teams) {
             if (team.getMembers().size() >= teamSize) continue;
             if (team.getGameCount(pGame) >= GAME_CAP) continue;
@@ -208,9 +203,9 @@ public class TeamBuilder {
         }
         return null;
     }
-
+    //// Method to find the best fitting  Leftover team for a participant
     private static Team findBestLeftoverTeam(List<Team> teams, Participant p, double overallAvg, int teamSize) {
-        // ... (Logic same as provided previously, simplified for brevity as it runs sequentially)
+        // (Logic same as provided previously, simplified for brevity as it runs sequentially)
         // Ensure same logic as findBestTeam but with looser role rules
         if (p == null) return null;
         String pRole = safeRole(p);
@@ -256,10 +251,7 @@ public class TeamBuilder {
         return (p == null) ? 0 : p.getSkillLevel();
     }
     public static List<List<Participant>> formTeamsWithAbstractAlgorithm(List<Participant> participants, int teamSize) {
-        // Using abstract class - polymorphism
         TeamFormationAlgorithm algorithm = new BalancedTeamAlgorithm();
-
-        // This calls the overridden method in BalancedTeamAlgorithm
         return algorithm.formTeams(participants, teamSize);
     }
 

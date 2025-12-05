@@ -33,7 +33,7 @@ public class MainCLI {
                         handleParticipantFlow(scanner);
                         break;
                     case 2:
-                        handleOrganizerFlow(scanner);
+                        handleOrganizerFlow(scanner); //1.(SD-Organizer Login)
                         break;
                     case 3:
                         exitApplication(scanner);
@@ -57,9 +57,9 @@ public class MainCLI {
     }
 
 
-    private static void handleOrganizerFlow(Scanner scanner) {
+    private static void handleOrganizerFlow(Scanner scanner) { //1.1.(SD-Organizer Login)
         // *** Inject the system dependency ***
-        OrganizerCLI organizerCLI = new OrganizerCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH, teamFormationSystem);
+        OrganizerCLI organizerCLI = new OrganizerCLI(scanner, currentUploadedFilePath, TEAMS_OUTPUT_PATH, teamFormationSystem); //1.2.(SD-Organizer Login)
 
         if (organizerCLI.authenticate()) {
             organizerCLI.showMenu();
